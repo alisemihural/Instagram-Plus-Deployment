@@ -1,4 +1,4 @@
-.login-container {
+.signup-container {
     max-width: 400px;
     margin: 100px auto;
     padding: 20px;
@@ -9,7 +9,7 @@
     color: white;
 }
 
-.login-container input {
+.signup-container input {
     display: block;
     width: 90%;
     margin: 10px auto;
@@ -20,7 +20,7 @@
     color: white;
 }
 
-.login-container button {
+.signup-container button {
     padding: 10px 20px;
     margin-top: 10px;
     background-color: #007bff;
@@ -30,17 +30,17 @@
     cursor: pointer;
 }
 
-.login-container button:hover {
+.signup-container button:hover {
     background-color: #0056b3;
 }
 
-.signup-link {
+.login-link {
     margin-top: 10px;
     font-size: 0.9rem;
     color: #00bcd4;
     text-decoration: none;
 }
 
-.signup-link:hover {
+.login-link:hover {
     text-decoration: underline;
 }

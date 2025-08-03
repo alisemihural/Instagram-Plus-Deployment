@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import Navbar from './navbar.jsx';
-import Home from './home.jsx';
-import Login from './components/Login.jsx';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Navbar from "./navbar.jsx";
+import Home from "./home.jsx";
+import Login from "./components/Login.jsx";
+import Signup from "./components/Signup.jsx";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 function App() {
   return (
@@ -11,6 +11,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
       </Routes>
     </BrowserRouter>
   );
