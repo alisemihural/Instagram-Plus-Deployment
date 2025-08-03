@@ -3,12 +3,12 @@
     margin: 0;
     padding: 0;
     text-align: center;
+    display: flex;
 }
 
 html {
     height: 100%;
     width: 100%;
-    overflow: hidden;
 }
 
 body {
