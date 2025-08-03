@@ -1,23 +1,96 @@
-# Node modules
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# Node.js
 node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
 
-# Environment variables
-.env
+# Python
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+env/
+venv/
+*.env
+*.venv
+.Python
+*.sqlite3
+.ipynb_checkpoints
 
-# Logs
-logs
+# Secret
+env.json
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+target/
+build/
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 
-# OS files
-.DS_Store
-Thumbs.db
-
-# VSCode settings
+# IDEs and editors
+# VSCode
 .vscode/
+.vscode-server
 
-# Build artifacts
-dist/
+# IntelliJ IDEA
+.idea/
+
+# Eclipse
+.project
+.classpath
+.settings/
+
+# JetBrains
+*.iml
+*.iws
+out/
+
+# MacOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+
+# Linux
+*~
+*.swp
+.swo
+
+# Log files
+*.log
+
+# Backup files
+*~
+*.bak
+*.swp
+
+# Environment files
+.env
+.cache
+.config
+
+# Test & Coverage
 coverage/
+*.coveragerc
+nosetests.xml
+*.tox
+*.nox
+*.coverage
+*.hypothesis/
+
+# Docker
+**/Dockerfile
+**/docker-compose.yml
+docker-compose.override.yml
+
+# Misc
+*.tgz
+*.zip
+*.tar.gz
