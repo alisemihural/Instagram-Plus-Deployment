@@ -4,15 +4,37 @@ import auth from '../middleware/auth.js'
 
 const router = express.Router()
 
-router.get('/:id', async (req, res) => {
+router.get('/profile', auth, async (req, res) => {
     try {
-        const user = await User.findById(req.params.id).select('-password')
+        const user = await User.findById(req.userId).select('-password')
         res.status(200).json(user)
     } catch (err) {
         res.status(500).json({ message: err.message })
     }
 })
 
+router.patch('/editProfile', auth, async (req, res) => {
+    const { username, profilePic } = req.body
+
+    if (!req.userId) {
+        return res.status(401).json({ message: 'Unauthorized' })
+    }
+
+    try {
+        const updatedUser = await User.findByIdAndUpdate(
+            req.userId,
+            { username, profilePic },
+            { new: true }
+        ).select('-password')
+
+        res.status(200).json(updatedUser)
+    } catch (err) {
+        console.error('Error updating profile:', err)
+        res.status(500).json({ message: err.message })
+    }
+})
+
+// Follow / Unfollow
 router.patch('/:id/follow', auth, async (req, res) => {
     try {
         const target = await User.findById(req.params.id)
@@ -30,6 +52,15 @@ router.patch('/:id/follow', auth, async (req, res) => {
         await me.save()
 
         res.status(200).json({ message: 'Updated follow status' })
+    } catch (err) {
+        res.status(500).json({ message: err.message })
+    }
+})
+
+router.get('/:id', async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id).select('-password')
+        res.status(200).json(user)
     } catch (err) {
         res.status(500).json({ message: err.message })
     }
