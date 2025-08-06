@@ -25,7 +25,7 @@ const Home = () => {
             ) : (
                 posts.map(post => (
                     <div className="post" key={post._id}>
-                        <div className="post-header" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                        <div className="post-header" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <img
                                 src={post.author?.profilePic || 'https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png'}
                                 alt="Profile"
@@ -33,13 +33,19 @@ const Home = () => {
                                     width: '32px',
                                     height: '32px',
                                     borderRadius: '50%',
-                                    marginRight: '10px',
                                     objectFit: 'cover'
                                 }}
                             />
-                            <strong>{post.author?.username}</strong>
+                            <div style={{ textAlign: 'left' }}>
+                                <strong>{post.author?.username}</strong>
+                                <div style={{ fontSize: '12px', color: '#666' }}>
+                                    {new Date(post.createdAt).toLocaleString('en-US', {
+                                        dateStyle: 'medium',
+                                        timeStyle: 'short'
+                                    })}
+                                </div>
+                            </div>
                         </div>
-
 
                         <img src={post.image} alt="Post" className="post-image" />
                         <p className="post-caption">{post.caption}</p>
