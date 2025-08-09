@@ -2,6 +2,138 @@ import { useEffect, useState } from 'react'
 import axios from 'axios'
 import './home.css'
 
+const PostCarousel = ({ items, legacyImage, author, createdAt, caption }) => {
+    const [index, setIndex] = useState(0)
+
+    const media = Array.isArray(items) && items.length > 0
+        ? items
+        : legacyImage
+            ? [{ kind: 'image', src: legacyImage }]
+            : []
+
+    if (media.length === 0) return null
+
+    const cur = media[index]
+    const type = cur.kind || cur.type || 'image'
+
+    const handlePrev = () => setIndex(prev => (prev > 0 ? prev - 1 : media.length - 1))
+    const handleNext = () => setIndex(prev => (prev < media.length - 1 ? prev + 1 : 0))
+
+    return (
+        <div style={{
+            backgroundColor: '#fff',
+            border: '1px solid #e6e6e6',
+            borderRadius: '10px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+            marginBottom: '20px',
+            maxWidth: '600px',
+            marginLeft: 'auto',
+            marginRight: 'auto',
+            fontFamily: 'Arial, sans-serif',
+            overflow: 'hidden'
+        }}>
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '10px'
+            }}>
+                <img
+                    src={author?.profilePic || 'https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png'}
+                    alt='Profile'
+                    style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '50%',
+                        objectFit: 'cover',
+                        border: '1px solid #ddd'
+                    }}
+                />
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'start' }}>
+                    <strong style={{ fontSize: '14px' }}>{author?.username || 'Unknown'}</strong>
+                    <div style={{ fontSize: '12px', color: '#666' }}>
+                        {new Date(createdAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}
+                    </div>
+                </div>
+            </div>
+
+            <div style={{
+                position: 'relative',
+                width: '100%',
+                height: '500px',
+                backgroundColor: '#000',
+                overflow: 'hidden'
+            }}>
+                {type === 'video' ? (
+                    <video
+                        src={cur.src}
+                        controls
+                        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    />
+                ) : (
+                    <img
+                        src={cur.src}
+                        alt={`Slide ${index}`}
+                        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    />
+                )}
+
+                {media.length > 1 && (
+                    <>
+                        <button
+                            onClick={handlePrev}
+                            style={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '10px',
+                                transform: 'translateY(-50%)',
+                                background: 'rgba(0,0,0,0.3)',
+                                border: 'none',
+                                color: 'white',
+                                fontSize: '20px',
+                                padding: '8px',
+                                cursor: 'pointer',
+                                borderRadius: '50%',
+                                zIndex: 2
+                            }}
+                        >
+                            ‹
+                        </button>
+                        <button
+                            onClick={handleNext}
+                            style={{
+                                position: 'absolute',
+                                top: '50%',
+                                right: '10px',
+                                transform: 'translateY(-50%)',
+                                background: 'rgba(0,0,0,0.3)',
+                                border: 'none',
+                                color: 'white',
+                                fontSize: '20px',
+                                padding: '8px',
+                                cursor: 'pointer',
+                                borderRadius: '50%',
+                                zIndex: 2
+                            }}
+                        >
+                            ›
+                        </button>
+                    </>
+                )}
+            </div>
+
+            <div style={{
+                borderTop: '1px solid #e6e6e6',
+                padding: '10px',
+                fontSize: '14px',
+                textAlign: 'left'
+            }}>
+                <strong>{author?.username || 'Unknown'}</strong>: {caption}
+            </div>
+        </div>
+    )
+}
+
 const Home = () => {
     const [posts, setPosts] = useState([])
 
@@ -14,42 +146,23 @@ const Home = () => {
                 console.error('Failed to fetch feed:', err)
             }
         }
-
         fetchFeed()
     }, [])
 
     return (
-        <div className="feed-container">
+        <div className='feed-container'>
             {posts.length === 0 ? (
                 <p>No posts yet</p>
             ) : (
                 posts.map(post => (
-                    <div className="post" key={post._id}>
-                        <div className="post-header" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <img
-                                src={post.author?.profilePic || 'https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png'}
-                                alt="Profile"
-                                style={{
-                                    width: '32px',
-                                    height: '32px',
-                                    borderRadius: '50%',
-                                    objectFit: 'cover'
-                                }}
-                            />
-                            <div style={{ textAlign: 'left' }}>
-                                <strong>{post.author?.username}</strong>
-                                <div style={{ fontSize: '12px', color: '#666' }}>
-                                    {new Date(post.createdAt).toLocaleString('en-US', {
-                                        dateStyle: 'medium',
-                                        timeStyle: 'short'
-                                    })}
-                                </div>
-                            </div>
-                        </div>
-
-                        <img src={post.image} alt="Post" className="post-image" />
-                        <p className="post-caption">{post.caption}</p>
-                    </div>
+                    <PostCarousel
+                        key={post._id}
+                        items={post.media}
+                        legacyImage={post.image}
+                        author={post.author}
+                        createdAt={post.createdAt}
+                        caption={post.caption}
+                    />
                 ))
             )}
         </div>

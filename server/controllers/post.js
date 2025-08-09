@@ -1,25 +1,32 @@
 import Post from '../models/Post.js'
 
 export const createPost = async (req, res) => {
-    const { caption, image } = req.body
+    const { caption, media } = req.body
 
-    if (!image) {
-        return res.status(400).json({ message: 'Image is required' })
+    if (!req.userId) return res.status(401).json({ message: 'Unauthorized' })
+    if (!Array.isArray(media) || media.length === 0) {
+        return res.status(400).json({ message: 'Provide 1-5 media items' })
+    }
+    if (media.length > 5) {
+        return res.status(400).json({ message: 'Maximum 5 media items per post' })
     }
 
-    if (!req.userId) {
-        console.warn('createPost called without req.userId')
-        return res.status(401).json({ message: 'Unauthorized' })
+    for (const m of media) {
+        if (!m?.kind || !m?.src) return res.status(400).json({ message: 'Each media needs kind and src' })
+        if (m.kind === 'image' && !m.src.startsWith('data:image/')) {
+            return res.status(400).json({ message: 'Images must be base64 data URLs' })
+        }
+        if (m.kind === 'video' && !/^https?:\/\//.test(m.src)) {
+            return res.status(400).json({ message: 'Videos must be a URL' })
+        }
     }
 
     try {
         const newPost = await Post.create({
             author: req.userId,
             caption,
-            image
+            media
         })
-
-        console.log(`Post created by user ${req.userId} with ID ${newPost._id}`)
         res.status(201).json(newPost)
     } catch (err) {
         console.error('Error creating post:', err)

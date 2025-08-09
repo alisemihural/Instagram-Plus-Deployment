@@ -1,9 +1,14 @@
 import mongoose from 'mongoose'
 
-const postSchema = mongoose.Schema({
+const mediaSchema = new mongoose.Schema({
+    kind: { type: String, enum: ['image', 'video'], required: true }, // image=base64, video=URL
+    src: { type: String, required: true }
+}, { _id: false })
+
+const postSchema = new mongoose.Schema({
     author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    image: { type: String, required: true },
     caption: { type: String },
+    media: { type: [mediaSchema], validate: v => v.length > 0 && v.length <= 5 },
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     comments: [
         {
