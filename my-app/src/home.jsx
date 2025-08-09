@@ -16,8 +16,13 @@ const PostCarousel = ({ items, legacyImage, author, createdAt, caption }) => {
     const cur = media[index]
     const type = cur.kind || cur.type || 'image'
 
-    const handlePrev = () => setIndex(prev => (prev > 0 ? prev - 1 : media.length - 1))
-    const handleNext = () => setIndex(prev => (prev < media.length - 1 ? prev + 1 : 0))
+    const handlePrev = () => {
+        if (index > 0) setIndex(index - 1)
+    }
+
+    const handleNext = () => {
+        if (index < media.length - 1) setIndex(index + 1)
+    }
 
     return (
         <div style={{
@@ -78,47 +83,72 @@ const PostCarousel = ({ items, legacyImage, author, createdAt, caption }) => {
                     />
                 )}
 
+                {index > 0 && (
+                    <button
+                        onClick={handlePrev}
+                        style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '10px',
+                            transform: 'translateY(-50%)',
+                            background: 'rgba(0,0,0,0.3)',
+                            border: 'none',
+                            color: 'white',
+                            fontSize: '20px',
+                            padding: '8px',
+                            cursor: 'pointer',
+                            borderRadius: '50%',
+                            zIndex: 2
+                        }}
+                    >
+                        ‹
+                    </button>
+                )}
+
+                {index < media.length - 1 && (
+                    <button
+                        onClick={handleNext}
+                        style={{
+                            position: 'absolute',
+                            top: '50%',
+                            right: '10px',
+                            transform: 'translateY(-50%)',
+                            background: 'rgba(0,0,0,0.3)',
+                            border: 'none',
+                            color: 'white',
+                            fontSize: '20px',
+                            padding: '8px',
+                            cursor: 'pointer',
+                            borderRadius: '50%',
+                            zIndex: 2
+                        }}
+                    >
+                        ›
+                    </button>
+                )}
+
                 {media.length > 1 && (
-                    <>
-                        <button
-                            onClick={handlePrev}
-                            style={{
-                                position: 'absolute',
-                                top: '50%',
-                                left: '10px',
-                                transform: 'translateY(-50%)',
-                                background: 'rgba(0,0,0,0.3)',
-                                border: 'none',
-                                color: 'white',
-                                fontSize: '20px',
-                                padding: '8px',
-                                cursor: 'pointer',
-                                borderRadius: '50%',
-                                zIndex: 2
-                            }}
-                        >
-                            ‹
-                        </button>
-                        <button
-                            onClick={handleNext}
-                            style={{
-                                position: 'absolute',
-                                top: '50%',
-                                right: '10px',
-                                transform: 'translateY(-50%)',
-                                background: 'rgba(0,0,0,0.3)',
-                                border: 'none',
-                                color: 'white',
-                                fontSize: '20px',
-                                padding: '8px',
-                                cursor: 'pointer',
-                                borderRadius: '50%',
-                                zIndex: 2
-                            }}
-                        >
-                            ›
-                        </button>
-                    </>
+                    <div style={{
+                        position: 'absolute',
+                        bottom: '10px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        display: 'flex',
+                        gap: '6px'
+                    }}>
+                        {media.map((_, i) => (
+                            <span
+                                key={i}
+                                style={{
+                                    width: '8px',
+                                    height: '8px',
+                                    borderRadius: '50%',
+                                    backgroundColor: i === index ? '#fff' : 'rgba(255,255,255,0.5)',
+                                    transition: 'background-color 0.2s'
+                                }}
+                            />
+                        ))}
+                    </div>
                 )}
             </div>
 
