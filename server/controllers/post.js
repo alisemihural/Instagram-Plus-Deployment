@@ -62,3 +62,47 @@ export const likePost = async (req, res) => {
         res.status(500).json({ message: err.message })
     }
 }
+
+export const addComment = async (req, res) => {
+    const { id } = req.params
+    const { text } = req.body
+
+    if (!text || text.trim() === '') {
+        return res.status(400).json({ message: 'No Comment is Inputted' })
+    }
+
+    try {
+        const post = await Post.findById(id)
+        if (!post) return res.status(404).json({ message: 'Post not found' })
+
+        const comment = {
+            user: req.userId,
+            text: text.trim()
+        }
+
+        post.comments.push(comment)
+        await post.save()
+
+        const populatedPost = await Post.findById(id).populate('comments.user', 'username')
+        const lastComment = populatedPost.comments[populatedPost.comments.length - 1]
+
+        res.status(201).json(lastComment)
+    } catch (err) {
+        console.error('Error adding comment:', err)
+        res.status(500).json({ message: 'Server error' })
+    }
+}
+
+export const getComments = async (req, res) => {
+    const { id } = req.params
+
+    try {
+        const post = await Post.findById(id).populate('comments.user', 'username')
+        if (!post) return res.status(404).json({ message: 'Post not found' })
+
+        res.status(200).json(post.comments)
+    } catch (err) {
+        console.error('Error fetching comments:', err)
+        res.status(500).json({ message: 'Server error' })
+    }
+}
