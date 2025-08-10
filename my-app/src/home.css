@@ -24,6 +24,17 @@
     object-fit: contain;
 }
 
+.story {
+    display: inline;
+    overflow-x: auto;
+}
+
+.story-image {
+    border: 1px;
+    height: 50px;
+    width: 50px;
+}
+
 .post-caption {
     padding: 10px;
     font-size: 14px;
