@@ -165,7 +165,8 @@ const PostCarousel = ({ items, legacyImage, author, createdAt, caption }) => {
 }
 
 const Home = () => {
-    const [posts, setPosts] = useState([])
+    const [posts, setPosts] = useState([]);
+    const [stories, setStories] = useState([]);
 
     useEffect(() => {
         const fetchFeed = async () => {
@@ -179,8 +180,28 @@ const Home = () => {
         fetchFeed()
     }, [])
 
+    useEffect(() => {
+        const fetchFeed = async () => {
+            try {
+                const res = await axios.get('http://localhost:5000/stories')
+                setStories(res.data)
+            } catch (err) {
+                console.error('Failed to fetch stories:', err)
+            }
+        }
+
+        fetchFeed()
+    }, [])
+
     return (
-        <div className='feed-container'>
+        <div className="feed-container">
+            {stories.length === 0 ? (<p>No stories yet</p>) : (
+                stories.map(eachStory => (
+                    <div className='story' key={eachStory._id}>
+                        <img src={eachStory.story} alt="Story" className="story-image" />
+                    </div>
+                ))
+            )}
             {posts.length === 0 ? (
                 <p>No posts yet</p>
             ) : (
