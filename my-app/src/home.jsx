@@ -164,9 +164,108 @@ const PostCarousel = ({ items, legacyImage, author, createdAt, caption }) => {
     )
 }
 
+const PostInteractions = ({ post, token }) => {
+    const [likesCount, setLikesCount] = useState(post.likes.length)
+    const [liked, setLiked] = useState(post.likes.includes(post.currentUserId))
+    const [comments, setComments] = useState([])
+    const [showComments, setShowComments] = useState(false)
+    const [commentText, setCommentText] = useState('')
+
+    const fetchComments = async () => {
+        try {
+            const res = await axios.get(`http://localhost:5000/posts/${post._id}/comments`, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            setComments(res.data)
+        } catch (err) {
+            console.error('Failed to fetch comments:', err)
+        }
+    }
+
+    const handleLike = async () => {
+        try {
+            const res = await axios.patch(`http://localhost:5000/posts/${post._id}/like`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            setLikesCount(res.data.likes.length)
+            setLiked(res.data.likes.includes(post.currentUserId))
+        } catch (err) {
+            console.error('Failed to like/unlike post:', err)
+        }
+    }
+
+    const handleAddComment = async () => {
+        if (!commentText.trim()) return
+        try {
+            const res = await axios.post(`http://localhost:5000/posts/${post._id}/comments`, { text: commentText }, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            setComments(prev => [...prev, res.data])
+            setCommentText('')
+        } catch (err) {
+            console.error('Failed to add comment:', err)
+        }
+    }
+
+    const toggleComments = () => {
+        if (!showComments) fetchComments()
+        setShowComments(!showComments)
+    }
+
+    return (
+        <div style={{ maxWidth: '600px', margin: '10px auto 40px' }}>
+            <button onClick={handleLike} style={{ cursor: 'pointer', marginRight: '10px' }}>
+                {liked ? 'Unlike' : 'Like'} ({likesCount})
+            </button>
+            <button onClick={toggleComments} style={{ cursor: 'pointer' }}>
+                {showComments ? 'Hide Comments' : `Show Comments (${comments.length})`}
+            </button>
+
+            {showComments && (
+                <div style={{ marginTop: '10px', textAlign: 'left' }}>
+                    {comments.length === 0 ? (
+                        <p>No comments yet</p>
+                    ) : (
+                        comments.map((c) => (
+                            <div key={c._id} style={{ borderBottom: '1px solid #eee', padding: '5px 0' }}>
+                                <strong>{c.user?.username || 'Unknown'}</strong>: {c.text}
+                            </div>
+                        ))
+                    )}
+                    <div style={{ marginTop: '10px' }}>
+                        <input
+                            type="text"
+                            placeholder="Add a comment..."
+                            value={commentText}
+                            onChange={e => setCommentText(e.target.value)}
+                            style={{ width: '80%', padding: '5px' }}
+                        />
+                        <button onClick={handleAddComment} style={{ padding: '5px 10px', marginLeft: '5px' }}>
+                            Post
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    )
+}
+
 const Home = () => {
-    const [posts, setPosts] = useState([]);
+    const [posts, setPosts] = useState([])
+    const token = localStorage.getItem('token')
+    const [userId, setUserId] = useState(null)
     const [stories, setStories] = useState([]);
+
+    useEffect(() => {
+        if (token) {
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]))
+                setUserId(payload.id)
+            } catch {
+                setUserId(null)
+            }
+        }
+    }, [token])
 
     useEffect(() => {
         const fetchFeed = async () => {
@@ -206,14 +305,16 @@ const Home = () => {
                 <p>No posts yet</p>
             ) : (
                 posts.map(post => (
-                    <PostCarousel
-                        key={post._id}
-                        items={post.media}
-                        legacyImage={post.image}
-                        author={post.author}
-                        createdAt={post.createdAt}
-                        caption={post.caption}
-                    />
+                    <div key={post._id} style={{ marginBottom: '36px' }}>
+                        <PostCarousel
+                            items={post.media}
+                            legacyImage={post.image}
+                            author={post.author}
+                            createdAt={post.createdAt}
+                            caption={post.caption}
+                        />
+                        <PostInteractions post={{ ...post, currentUserId: userId }} token={token} />
+                    </div>
                 ))
             )}
         </div>
