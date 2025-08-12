@@ -14,7 +14,7 @@ const EditProfile = () => {
         const fetchProfile = async () => {
             try {
                 const token = localStorage.getItem('token')
-                const res = await axios.get('http://localhost:5000/users/profile', {
+                const res = await axios.get('http://localhost:5001/users/profile', {
                     headers: { Authorization: `Bearer ${token}` }
                 })
 
@@ -45,7 +45,7 @@ const EditProfile = () => {
         e.preventDefault()
         try {
             const token = localStorage.getItem('token')
-            await axios.patch('http://localhost:5000/users/editProfile', {
+            await axios.patch('http://localhost:5001/users/editProfile', {
                 username,
                 profilePic
             }, {

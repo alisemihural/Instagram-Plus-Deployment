@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import axios from 'axios'
-import './login.css'
+import './Login.css'
 
 const Login = ({ setIsLoggedIn }) => {
     const [email, setEmail] = useState('')
@@ -12,7 +12,7 @@ const Login = ({ setIsLoggedIn }) => {
         e.preventDefault()
 
         try {
-            const res = await axios.post('http://localhost:5000/auth/login', {
+            const res = await axios.post('http://localhost:5001/auth/login', {
                 email,
                 password
             })
