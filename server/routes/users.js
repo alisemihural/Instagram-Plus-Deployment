@@ -6,7 +6,10 @@ const router = express.Router()
 
 router.get('/profile', auth, async (req, res) => {
     try {
-        const user = await User.findById(req.userId).select('-password')
+        const user = await User.findById(req.userId)
+            .select('-password')
+            .populate('followers', 'username profilePic')
+            .populate('following', 'username profilePic')
         res.status(200).json(user)
     } catch (err) {
         res.status(500).json({ message: err.message })
@@ -57,9 +60,35 @@ router.patch('/:id/follow', auth, async (req, res) => {
     }
 })
 
+// Get all users (for search/discover functionality)
+router.get('/', async (req, res) => {
+    try {
+        const users = await User.find().select('-password').limit(20)
+        res.status(200).json(users)
+    } catch (err) {
+        res.status(500).json({ message: err.message })
+    }
+})
+
+// Search users by username
+router.get('/search/:query', async (req, res) => {
+    try {
+        const { query } = req.params
+        const users = await User.find({
+            username: { $regex: query, $options: 'i' }
+        }).select('-password').limit(10)
+        res.status(200).json(users)
+    } catch (err) {
+        res.status(500).json({ message: err.message })
+    }
+})
+
 router.get('/:id', async (req, res) => {
     try {
-        const user = await User.findById(req.params.id).select('-password')
+        const user = await User.findById(req.params.id)
+            .select('-password')
+            .populate('followers', 'username profilePic')
+            .populate('following', 'username profilePic')
         res.status(200).json(user)
     } catch (err) {
         res.status(500).json({ message: err.message })

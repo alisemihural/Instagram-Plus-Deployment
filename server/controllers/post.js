@@ -44,6 +44,16 @@ export const getFeed = async (req, res) => {
     }
 }
 
+export const getUserPosts = async (req, res) => {
+    try {
+        const { userId } = req.params
+        const posts = await Post.find({ author: userId }).populate('author', 'username profilePic').sort({ createdAt: -1 })
+        res.status(200).json(posts)
+    } catch (err) {
+        res.status(500).json({ message: err.message })
+    }
+}
+
 export const likePost = async (req, res) => {
     const { id } = req.params
     try {

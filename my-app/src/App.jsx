@@ -13,6 +13,9 @@ import Login from './components/Login.jsx'
 import Signup from './components/Signup.jsx'
 import CreatePost from './components/Create.jsx'
 import EditProfile from './components/EditProfile.jsx'
+import MyProfile from './components/MyProfile.jsx'
+import DiscoverUsers from './components/DiscoverUsers.jsx'
+import UserProfile from './components/UserProfile.jsx'
 import Stories from './components/Stories.jsx'
 
 function App() {
@@ -56,8 +59,20 @@ const MainLayout = ({ isLoggedIn, setIsLoggedIn }) => {
                         element={isLoggedIn ? <CreatePost /> : <Navigate to="/login" />}
                     />
                     <Route
-                        path="/profile"
+                        path="/my-profile"
+                        element={isLoggedIn ? <MyProfile /> : <Navigate to="/login" />}
+                    />
+                    <Route
+                        path="/edit-profile"
                         element={isLoggedIn ? <EditProfile /> : <Navigate to="/login" />}
+                    />
+                    <Route
+                        path="/discover"
+                        element={isLoggedIn ? <DiscoverUsers /> : <Navigate to="/login" />}
+                    />
+                    <Route
+                        path="/user/:userId"
+                        element={isLoggedIn ? <UserProfile /> : <Navigate to="/login" />}
                     />
                     <Route
                         path="/create_story"
