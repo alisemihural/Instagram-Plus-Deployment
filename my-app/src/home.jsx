@@ -43,7 +43,7 @@ const PostCarousel = ({ items, legacyImage, author, createdAt, caption, currentU
         setIsLoading(true)
         try {
             const token = localStorage.getItem('token')
-            await axios.patch(`http://localhost:5001/users/${author._id}/follow`, {}, {
+            await axios.patch(`http://localhost:5000/users/${author._id}/follow`, {}, {
                 headers: { Authorization: `Bearer ${token}` }
             })
             
@@ -251,7 +251,7 @@ const PostInteractions = ({ post, token }) => {
 
     const fetchComments = async () => {
         try {
-            const res = await axios.get(`http://localhost:5001/posts/${post._id}/comments`, {
+            const res = await axios.get(`http://localhost:5000/posts/${post._id}/comments`, {
                 headers: { Authorization: `Bearer ${token}` }
             })
             setComments(res.data)
@@ -262,7 +262,7 @@ const PostInteractions = ({ post, token }) => {
 
     const handleLike = async () => {
         try {
-            const res = await axios.patch(`http://localhost:5001/posts/${post._id}/like`, {}, {
+            const res = await axios.patch(`http://localhost:5000/posts/${post._id}/like`, {}, {
                 headers: { Authorization: `Bearer ${token}` }
             })
             setLikesCount(res.data.likes.length)
@@ -275,7 +275,7 @@ const PostInteractions = ({ post, token }) => {
     const handleAddComment = async () => {
         if (!commentText.trim()) return
         try {
-            const res = await axios.post(`http://localhost:5001/posts/${post._id}/comments`, { text: commentText }, {
+            const res = await axios.post(`http://localhost:5000/posts/${post._id}/comments`, { text: commentText }, {
                 headers: { Authorization: `Bearer ${token}` }
             })
             setComments(prev => [...prev, res.data])
@@ -352,7 +352,7 @@ const Home = () => {
             try {
                 const token = localStorage.getItem('token')
                 if (token) {
-                    const res = await axios.get('http://localhost:5001/users/profile', {
+                    const res = await axios.get('http://localhost:5000/users/profile', {
                         headers: { Authorization: `Bearer ${token}` }
                     })
                     setCurrentUser(res.data)
@@ -368,7 +368,7 @@ const Home = () => {
     useEffect(() => {
         const fetchFeed = async () => {
             try {
-                const res = await axios.get('http://localhost:5001/posts')
+                const res = await axios.get('http://localhost:5000/posts')
                 setPosts(res.data)
             } catch (err) {
                 console.error('Failed to fetch feed:', err)
@@ -382,7 +382,7 @@ const Home = () => {
         try {
             const token = localStorage.getItem('token')
             if (token) {
-                const res = await axios.get('http://localhost:5001/users/profile', {
+                const res = await axios.get('http://localhost:5000/users/profile', {
                     headers: { Authorization: `Bearer ${token}` }
                 })
                 setCurrentUser(res.data)
@@ -395,7 +395,7 @@ const Home = () => {
     useEffect(() => {
         const fetchFeed = async () => {
             try {
-                const res = await axios.get('http://localhost:5001/stories')
+                const res = await axios.get('http://localhost:5000/stories')
                 setStories(res.data)
             } catch (err) {
                 console.error('Failed to fetch stories:', err)

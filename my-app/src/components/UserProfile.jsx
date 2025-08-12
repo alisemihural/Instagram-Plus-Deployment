@@ -18,17 +18,17 @@ const UserProfile = () => {
                 const token = localStorage.getItem('token')
                 
                 // Fetch current user
-                const currentUserRes = await axios.get('http://localhost:5001/users/profile', {
+                const currentUserRes = await axios.get('http://localhost:5000/users/profile', {
                     headers: { Authorization: `Bearer ${token}` }
                 })
                 setCurrentUser(currentUserRes.data)
 
                 // Fetch target user
-                const userRes = await axios.get(`http://localhost:5001/users/${userId}`)
+                const userRes = await axios.get(`http://localhost:5000/users/${userId}`)
                 setUser(userRes.data)
 
                 // Fetch user's posts
-                const postsRes = await axios.get(`http://localhost:5001/posts/user/${userId}`)
+                const postsRes = await axios.get(`http://localhost:5000/posts/user/${userId}`)
                 setUserPosts(postsRes.data)
 
             } catch (err) {
@@ -51,16 +51,16 @@ const UserProfile = () => {
         setIsFollowLoading(true)
         try {
             const token = localStorage.getItem('token')
-            await axios.patch(`http://localhost:5001/users/${user._id}/follow`, {}, {
+            await axios.patch(`http://localhost:5000/users/${user._id}/follow`, {}, {
                 headers: { Authorization: `Bearer ${token}` }
             })
 
             // Refresh user data
-            const userRes = await axios.get(`http://localhost:5001/users/${userId}`)
+            const userRes = await axios.get(`http://localhost:5000/users/${userId}`)
             setUser(userRes.data)
 
             // Refresh current user data
-            const currentUserRes = await axios.get('http://localhost:5001/users/profile', {
+            const currentUserRes = await axios.get('http://localhost:5000/users/profile', {
                 headers: { Authorization: `Bearer ${token}` }
             })
             setCurrentUser(currentUserRes.data)

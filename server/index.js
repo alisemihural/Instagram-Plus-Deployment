@@ -42,7 +42,7 @@ app.use('/users', userRoutes)
 app.use('/upload', uploadRoutes)
 app.use('/stories', storyRoutes)
 
-const PORT = process.env.PORT || 5001
+const PORT = process.env.PORT || 5000
 
 mongoose.connect(process.env.CONNECTION_URL)
     .then(() => app.listen(PORT, () => console.log(`Server Running on port: ${PORT} | ${process.env.CONNECTION_URL}`)))

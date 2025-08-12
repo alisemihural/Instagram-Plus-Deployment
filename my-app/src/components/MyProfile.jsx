@@ -15,13 +15,13 @@ const MyProfile = () => {
                 const token = localStorage.getItem('token')
                 
                 // Fetch current user with populated followers/following
-                const userRes = await axios.get('http://localhost:5001/users/profile', {
+                const userRes = await axios.get('http://localhost:5000/users/profile', {
                     headers: { Authorization: `Bearer ${token}` }
                 })
                 setUser(userRes.data)
 
                 // Fetch user's posts
-                const postsRes = await axios.get(`http://localhost:5001/posts/user/${userRes.data._id}`)
+                const postsRes = await axios.get(`http://localhost:5000/posts/user/${userRes.data._id}`)
                 setUserPosts(postsRes.data)
 
             } catch (err) {
