@@ -251,7 +251,7 @@ const PostInteractions = ({ post, token }) => {
 
     const fetchComments = async () => {
         try {
-            const res = await axios.get(`http://localhost:5000/posts/${post._id}/comments`, {
+            const res = await axios.get(`http://localhost:5001/posts/${post._id}/comments`, {
                 headers: { Authorization: `Bearer ${token}` }
             })
             setComments(res.data)
@@ -262,7 +262,7 @@ const PostInteractions = ({ post, token }) => {
 
     const handleLike = async () => {
         try {
-            const res = await axios.patch(`http://localhost:5000/posts/${post._id}/like`, {}, {
+            const res = await axios.patch(`http://localhost:5001/posts/${post._id}/like`, {}, {
                 headers: { Authorization: `Bearer ${token}` }
             })
             setLikesCount(res.data.likes.length)
@@ -275,7 +275,7 @@ const PostInteractions = ({ post, token }) => {
     const handleAddComment = async () => {
         if (!commentText.trim()) return
         try {
-            const res = await axios.post(`http://localhost:5000/posts/${post._id}/comments`, { text: commentText }, {
+            const res = await axios.post(`http://localhost:5001/posts/${post._id}/comments`, { text: commentText }, {
                 headers: { Authorization: `Bearer ${token}` }
             })
             setComments(prev => [...prev, res.data])
