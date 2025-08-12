@@ -8,6 +8,7 @@ import authRoutes from './routes/auth.js'
 import postRoutes from './routes/posts.js'
 import userRoutes from './routes/users.js'
 import uploadRoutes from './routes/upload.js'
+import storyRoutes from './routes/stories.js'
 
 const app = express()
 dotenv.config()
@@ -39,6 +40,7 @@ app.use('/auth', authRoutes)
 app.use('/posts', postRoutes)
 app.use('/users', userRoutes)
 app.use('/upload', uploadRoutes)
+app.use('/stories', storyRoutes)
 
 const PORT = process.env.PORT || 5001
 
