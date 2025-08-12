@@ -19,8 +19,9 @@ const Navbar = ({ isLoggedIn, setIsLoggedIn }) => {
                 {isLoggedIn && (
                     <>
                         <li><Link to="/messages">Messages</Link></li>
+                        <li><Link to="/discover">Discover</Link></li>
                         <li><Link to="/post">Post</Link></li>
-                        <li><Link to="/profile">Profile</Link></li>
+                        <li><Link to="/my-profile">My Profile</Link></li>
                         <li><Link to="/create">Create</Link></li>
                     </>
                 )}
@@ -35,8 +36,8 @@ const Navbar = ({ isLoggedIn, setIsLoggedIn }) => {
 
             {isLoggedIn && (
                 <div style={{ marginTop: 'auto', marginBottom: '20px', display: 'flex', flexDirection: 'column' }}>
-                    <Link to="/profile" style={{ fontWeight: 'bold', padding: '0px 0px 10px 10px' }}>
-                        Profile
+                    <Link to="/my-profile" style={{ fontWeight: 'bold', padding: '0px 0px 10px 10px' }}>
+                        My Profile
                     </Link>
                     <Link
                         onClick={handleLogout}
