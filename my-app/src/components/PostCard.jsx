@@ -1,11 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import axios from 'axios'
 import { AiFillHeart, AiOutlineHeart } from 'react-icons/ai'
 import { BiMessageRounded } from 'react-icons/bi'
 import MediaCarousel from './MediaCarousel.jsx'
 import CommentsModal from './CommentsModal.jsx'
 
-const PostCard = ({ post, token, currentUserId }) => {
+const PostCard = ({ post, token, currentUserId, currentUser, onFollowChange }) => {
     const [doc, setDoc] = useState(post)
 
     const media = useMemo(() => (
@@ -18,7 +18,19 @@ const PostCard = ({ post, token, currentUserId }) => {
     const [commentsCount, setCommentsCount] = useState(doc.comments?.length || 0)
     const [modalOpen, setModalOpen] = useState(false)
 
-    const fmt = iso => !iso ? '' : new Date(iso).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+    const [isFollowing, setIsFollowing] = useState(false)
+    const [followBusy, setFollowBusy] = useState(false)
+
+    useEffect(() => {
+        const authId = doc.author?._id
+        const arr = currentUser?.following || []
+        const has = arr.some(u => (u?._id || u)?.toString() === (authId || '').toString() || u === authId)
+        setIsFollowing(Boolean(has))
+    }, [currentUser, doc.author?._id])
+
+    const fmt = iso => !iso ? '' : new Date(iso).toLocaleString(undefined, {
+        year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+    })
     const createdAt = doc.createdAt ? fmt(doc.createdAt) : ''
     const updatedAt = doc.updatedAt ? fmt(doc.updatedAt) : ''
     const isEdited = doc.updatedAt && doc.createdAt && new Date(doc.updatedAt) - new Date(doc.createdAt) > 60000
@@ -33,6 +45,24 @@ const PostCard = ({ post, token, currentUserId }) => {
             setLiked(arr.some(u => (u?._id || u)?.toString() === (currentUserId || '').toString()))
         } catch (err) {
             console.error('Failed to like/unlike post:', err)
+        }
+    }
+
+    const toggleFollow = async () => {
+        if (!token || !doc.author?._id || followBusy) return
+        if (doc.author._id === currentUserId) return
+        try {
+            setFollowBusy(true)
+            await axios.patch(`http://localhost:5000/users/${doc.author._id}/follow`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            setIsFollowing(v => !v)
+            onFollowChange && onFollowChange()
+        } catch (err) {
+            console.error('Failed to toggle follow:', err)
+            alert('Failed to update follow status')
+        } finally {
+            setFollowBusy(false)
         }
     }
 
@@ -63,18 +93,40 @@ const PostCard = ({ post, token, currentUserId }) => {
                 boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
             }}
         >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px' }}>
-                <img
-                    src={doc.author?.profilePic || 'https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png'}
-                    alt='avatar'
-                    style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }}
-                />
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ fontWeight: 600 }}>{doc.author?.username || 'Unknown'}</div>
-                    <div style={{ fontSize: 12, color: '#777' }}>
-                        {createdAt}{isEdited && <span> (edited {updatedAt})</span>}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <img
+                        src={doc.author?.profilePic || 'https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png'}
+                        alt='avatar'
+                        style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }}
+                    />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ fontWeight: 600 }}>{doc.author?.username || 'Unknown'}</div>
+                        <div style={{ fontSize: 12, color: '#777' }}>
+                            {createdAt}{isEdited && <span> (edited {updatedAt})</span>}
+                        </div>
                     </div>
                 </div>
+
+                {currentUserId && doc.author?._id && doc.author._id !== currentUserId && (
+                    <button
+                        onClick={toggleFollow}
+                        disabled={followBusy}
+                        style={{
+                            backgroundColor: isFollowing ? '#e0e0e0' : '#0095f6',
+                            color: isFollowing ? '#333' : '#fff',
+                            border: 'none',
+                            borderRadius: 6,
+                            padding: '6px 12px',
+                            fontSize: 12,
+                            fontWeight: 700,
+                            cursor: followBusy ? 'default' : 'pointer',
+                            opacity: followBusy ? 0.7 : 1
+                        }}
+                    >
+                        {followBusy ? '...' : isFollowing ? 'Unfollow' : 'Follow'}
+                    </button>
+                )}
             </div>
 
             <MediaCarousel media={media} index={index} setIndex={setIndex} height={480} dark />
@@ -105,9 +157,9 @@ const PostCard = ({ post, token, currentUserId }) => {
 
             <CommentsModal
                 open={modalOpen}
-                onClose={() => {
+                onClose={didChange => {
                     setModalOpen(false)
-                    refreshPost()
+                    if (didChange) refreshPost()
                 }}
                 post={doc}
                 token={token}

@@ -1,42 +1,85 @@
 import { useEffect, useState } from 'react'
 import axios from 'axios'
-import PostCard from './components/PostCard.jsx'
+import './home.css'
+import PostCard from './components/PostCard'
 
 const Home = () => {
     const [posts, setPosts] = useState([])
-    const [user, setUser] = useState(null)
+    const [currentUser, setCurrentUser] = useState(null)
+    const [stories, setStories] = useState([])
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
 
+    const refreshUser = async () => {
+        try {
+            if (!token) return
+            const res = await axios.get('http://localhost:5000/users/profile', {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            setCurrentUser(res.data)
+        } catch (err) {
+            console.error('Failed to refresh user data:', err)
+        }
+    }
+
+    useEffect(() => { refreshUser() }, [])
+
     useEffect(() => {
-        const load = async () => {
+        const fetchFeed = async () => {
             try {
-                if (token) {
-                    const me = await axios.get('http://localhost:5000/users/profile', {
-                        headers: { Authorization: `Bearer ${token}` }
-                    })
-                    setUser(me.data)
-                }
                 const res = await axios.get('http://localhost:5000/posts')
                 setPosts(res.data)
             } catch (err) {
-                console.error('Failed to load home:', err)
+                console.error('Failed to fetch feed:', err)
             }
         }
-        load()
+        fetchFeed()
+    }, [])
+
+    useEffect(() => {
+        const fetchStories = async () => {
+            try {
+                const res = await axios.get('http://localhost:5000/stories')
+                setStories(res.data || [])
+            } catch (err) {
+                console.error('Failed to fetch stories:', err)
+            }
+        }
+        fetchStories()
     }, [])
 
     return (
-        <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-            <div style={{ width: 'min(700px, 96vw)' }}>
-                {posts.map(p => (
+        <div className='feed-container'>
+            {stories.length === 0 ? (
+                <p>No stories yet</p>
+            ) : (
+                <div style={{ display: 'flex', gap: 10, padding: '10px 6px', overflowX: 'auto', marginBottom: 16 }}>
+                    {stories.map(s => (
+                        <div className='story' key={s._id} style={{ flex: '0 0 auto' }}>
+                            <img
+                                src={s.story}
+                                alt='Story'
+                                className='story-image'
+                                style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: '2px solid #e1306c' }}
+                            />
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {posts.length === 0 ? (
+                <p>No posts yet</p>
+            ) : (
+                posts.map(p => (
                     <PostCard
                         key={p._id}
                         post={p}
                         token={token}
-                        currentUserId={user?._id}
+                        currentUserId={currentUser?._id}
+                        currentUser={currentUser}
+                        onFollowChange={refreshUser}
                     />
-                ))}
-            </div>
+                ))
+            )}
         </div>
     )
 }
