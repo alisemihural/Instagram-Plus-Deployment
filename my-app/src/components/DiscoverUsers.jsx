@@ -68,17 +68,14 @@ const DiscoverUsers = () => {
                 headers: { Authorization: `Bearer ${token}` }
             })
 
-            // Refresh current user data
             const userRes = await axios.get('http://localhost:5000/users/profile', {
                 headers: { Authorization: `Bearer ${token}` }
             })
             setCurrentUser(userRes.data)
 
-            // Update the users list
             const usersRes = await axios.get('http://localhost:5000/users')
             setUsers(usersRes.data)
 
-            // Update search results if searching
             if (searchQuery.trim() !== '') {
                 const searchRes = await axios.get(`http://localhost:5000/users/search/${encodeURIComponent(searchQuery)}`)
                 setSearchResults(searchRes.data)

@@ -37,7 +37,6 @@ router.patch('/editProfile', auth, async (req, res) => {
     }
 })
 
-// Follow / Unfollow
 router.patch('/:id/follow', auth, async (req, res) => {
     try {
         const target = await User.findById(req.params.id)
@@ -60,7 +59,6 @@ router.patch('/:id/follow', auth, async (req, res) => {
     }
 })
 
-// Get all users (for search/discover functionality)
 router.get('/', async (req, res) => {
     try {
         const users = await User.find().select('-password').limit(20)
@@ -70,7 +68,6 @@ router.get('/', async (req, res) => {
     }
 })
 
-// Search users by username
 router.get('/search/:query', async (req, res) => {
     try {
         const { query } = req.params

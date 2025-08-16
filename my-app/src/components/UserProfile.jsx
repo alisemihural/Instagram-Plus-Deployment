@@ -17,17 +17,14 @@ const UserProfile = () => {
             try {
                 const token = localStorage.getItem('token')
                 
-                // Fetch current user
                 const currentUserRes = await axios.get('http://localhost:5000/users/profile', {
                     headers: { Authorization: `Bearer ${token}` }
                 })
                 setCurrentUser(currentUserRes.data)
 
-                // Fetch target user
                 const userRes = await axios.get(`http://localhost:5000/users/${userId}`)
                 setUser(userRes.data)
 
-                // Fetch user's posts
                 const postsRes = await axios.get(`http://localhost:5000/posts/user/${userId}`)
                 setUserPosts(postsRes.data)
 
@@ -55,11 +52,9 @@ const UserProfile = () => {
                 headers: { Authorization: `Bearer ${token}` }
             })
 
-            // Refresh user data
             const userRes = await axios.get(`http://localhost:5000/users/${userId}`)
             setUser(userRes.data)
 
-            // Refresh current user data
             const currentUserRes = await axios.get('http://localhost:5000/users/profile', {
                 headers: { Authorization: `Bearer ${token}` }
             })

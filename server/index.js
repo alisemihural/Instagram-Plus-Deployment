@@ -13,25 +13,22 @@ import storyRoutes from './routes/stories.js'
 const app = express()
 dotenv.config()
 
-// Configure CORS first, before body parsers
 app.use(cors({
-    origin: true, // Allow all origins for now
+    origin: true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token', 'Origin', 'X-Requested-With', 'Accept'],
-    optionsSuccessStatus: 200 // For legacy browser support
+    optionsSuccessStatus: 200
 }))
 
 app.use(bodyParser.json({ limit: '30mb', extended: true }))
 app.use(bodyParser.urlencoded({ limit: '30mb', extended: true }))
 
-// Debug middleware to log all requests
 app.use((req, res, next) => {
     console.log(`${req.method} ${req.path} - Origin: ${req.get('Origin')}`);
     next();
 });
 
-// Test route
 app.get('/test', (req, res) => {
     res.json({ message: 'CORS is working!' })
 })

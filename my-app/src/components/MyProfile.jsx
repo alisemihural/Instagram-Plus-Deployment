@@ -2,28 +2,32 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import './UserProfile.css'
+import EditPostModal from './EditPostModal.jsx'
 
 const MyProfile = () => {
     const navigate = useNavigate()
     const [user, setUser] = useState(null)
     const [userPosts, setUserPosts] = useState([])
     const [isLoading, setIsLoading] = useState(true)
+    const [editingPost, setEditingPost] = useState(null)
+
+    const token = localStorage.getItem('token')
+
+    const refreshUserAndPosts = async () => {
+        const token = localStorage.getItem('token')
+        const userRes = await axios.get('http://localhost:5000/users/profile', {
+            headers: { Authorization: `Bearer ${token}` }
+        })
+        setUser(userRes.data)
+
+        const postsRes = await axios.get(`http://localhost:5000/posts/user/${userRes.data._id}`)
+        setUserPosts(postsRes.data)
+    }
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const token = localStorage.getItem('token')
-                
-                // Fetch current user with populated followers/following
-                const userRes = await axios.get('http://localhost:5000/users/profile', {
-                    headers: { Authorization: `Bearer ${token}` }
-                })
-                setUser(userRes.data)
-
-                // Fetch user's posts
-                const postsRes = await axios.get(`http://localhost:5000/posts/user/${userRes.data._id}`)
-                setUserPosts(postsRes.data)
-
+                await refreshUserAndPosts()
             } catch (err) {
                 console.error('Failed to fetch user data:', err)
                 alert('Failed to load profile')
@@ -32,23 +36,31 @@ const MyProfile = () => {
                 setIsLoading(false)
             }
         }
-
         fetchData()
     }, [navigate])
 
+    const handleTileClick = post => {
+        setEditingPost(post)
+    }
+
+    const handleSaved = updated => {
+        setUserPosts(prev => prev.map(p => p._id === updated._id ? updated : p))
+        setEditingPost(null)
+    }
+
     if (isLoading) {
         return (
-            <div className="user-profile-loading">
-                <div className="loading-spinner">Loading your profile...</div>
+            <div className='user-profile-loading'>
+                <div className='loading-spinner'>Loading your profile...</div>
             </div>
         )
     }
 
     if (!user) {
         return (
-            <div className="user-profile-error">
+            <div className='user-profile-error'>
                 <h2>Profile not found</h2>
-                <button onClick={() => navigate('/')} className="back-btn">
+                <button onClick={() => navigate('/')} className='back-btn'>
                     Go Back to Home
                 </button>
             </div>
@@ -56,34 +68,34 @@ const MyProfile = () => {
     }
 
     return (
-        <div className="user-profile">
-            <div className="profile-header">
-                <div className="profile-info">
+        <div className='user-profile'>
+            <div className='profile-header'>
+                <div className='profile-info'>
                     <img
                         src={user.profilePic || 'https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png'}
                         alt={`${user.username}'s profile`}
-                        className="profile-picture"
+                        className='profile-picture'
                     />
-                    <div className="profile-details">
-                        <div className="profile-title">
+                    <div className='profile-details'>
+                        <div className='profile-title'>
                             <h1>{user.username}</h1>
                             <button
                                 onClick={() => navigate('/edit-profile')}
-                                className="edit-profile-button"
+                                className='edit-profile-button'
                             >
                                 Edit Profile
                             </button>
                         </div>
-                        <div className="profile-stats">
-                            <div className="stat">
+                        <div className='profile-stats'>
+                            <div className='stat'>
                                 <strong>{userPosts.length}</strong>
                                 <span>posts</span>
                             </div>
-                            <div className="stat">
+                            <div className='stat'>
                                 <strong>{user.followers?.length || 0}</strong>
                                 <span>followers</span>
                             </div>
-                            <div className="stat">
+                            <div className='stat'>
                                 <strong>{user.following?.length || 0}</strong>
                                 <span>following</span>
                             </div>
@@ -92,15 +104,15 @@ const MyProfile = () => {
                 </div>
             </div>
 
-            <div className="profile-content">
-                <div className="posts-section">
+            <div className='profile-content'>
+                <div className='posts-section'>
                     <h3>Your Posts</h3>
                     {userPosts.length === 0 ? (
-                        <div className="no-posts">
+                        <div className='no-posts'>
                             <p>You haven't posted anything yet</p>
-                            <button 
+                            <button
                                 onClick={() => navigate('/create')}
-                                className="create-post-btn"
+                                className='create-post-btn'
                                 style={{
                                     marginTop: '15px',
                                     padding: '10px 20px',
@@ -116,33 +128,38 @@ const MyProfile = () => {
                             </button>
                         </div>
                     ) : (
-                        <div className="posts-grid">
+                        <div className='posts-grid'>
                             {userPosts.map(post => (
-                                <div key={post._id} className="post-thumbnail">
+                                <div
+                                    key={post._id}
+                                    className='post-thumbnail'
+                                    onClick={() => handleTileClick(post)}
+                                    style={{ cursor: 'pointer' }}
+                                >
                                     {post.media && post.media.length > 0 ? (
                                         post.media[0].kind === 'video' ? (
-                                            <video 
-                                                src={post.media[0].src} 
-                                                className="post-media"
+                                            <video
+                                                src={post.media[0].src}
+                                                className='post-media'
                                                 muted
                                             />
                                         ) : (
-                                            <img 
-                                                src={post.media[0].src} 
-                                                alt="Post" 
-                                                className="post-media"
+                                            <img
+                                                src={post.media[0].src}
+                                                alt='Post'
+                                                className='post-media'
                                             />
                                         )
                                     ) : post.image ? (
-                                        <img 
-                                            src={post.image} 
-                                            alt="Post" 
-                                            className="post-media"
+                                        <img
+                                            src={post.image}
+                                            alt='Post'
+                                            className='post-media'
                                         />
                                     ) : (
-                                        <div className="no-media">No media</div>
+                                        <div className='no-media'>No media</div>
                                     )}
-                                    <div className="post-overlay">
+                                    <div className='post-overlay'>
                                         <span>{post.caption || 'No caption'}</span>
                                     </div>
                                 </div>
@@ -151,22 +168,21 @@ const MyProfile = () => {
                     )}
                 </div>
 
-                {/* Show followers and following if they exist */}
                 {(user.followers?.length > 0 || user.following?.length > 0) && (
-                    <div className="connections-section" style={{ marginTop: '40px' }}>
+                    <div className='connections-section' style={{ marginTop: '40px' }}>
                         {user.followers?.length > 0 && (
-                            <div className="followers-section" style={{ marginBottom: '30px' }}>
+                            <div className='followers-section' style={{ marginBottom: '30px' }}>
                                 <h4>Followers ({user.followers.length})</h4>
-                                <div className="connections-grid" style={{ 
-                                    display: 'flex', 
-                                    flexWrap: 'wrap', 
+                                <div className='connections-grid' style={{
+                                    display: 'flex',
+                                    flexWrap: 'wrap',
                                     gap: '15px',
                                     marginTop: '15px'
                                 }}>
                                     {user.followers.slice(0, 10).map(follower => (
-                                        <div 
-                                            key={follower._id} 
-                                            className="connection-item"
+                                        <div
+                                            key={follower._id}
+                                            className='connection-item'
                                             style={{
                                                 display: 'flex',
                                                 alignItems: 'center',
@@ -179,7 +195,7 @@ const MyProfile = () => {
                                             }}
                                             onClick={() => navigate(`/user/${follower._id}`)}
                                         >
-                                            <img 
+                                            <img
                                                 src={follower.profilePic || 'https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png'}
                                                 alt={follower.username}
                                                 style={{
@@ -202,18 +218,18 @@ const MyProfile = () => {
                         )}
 
                         {user.following?.length > 0 && (
-                            <div className="following-section">
+                            <div className='following-section'>
                                 <h4>Following ({user.following.length})</h4>
-                                <div className="connections-grid" style={{ 
-                                    display: 'flex', 
-                                    flexWrap: 'wrap', 
+                                <div className='connections-grid' style={{
+                                    display: 'flex',
+                                    flexWrap: 'wrap',
                                     gap: '15px',
                                     marginTop: '15px'
                                 }}>
                                     {user.following.slice(0, 10).map(following => (
-                                        <div 
-                                            key={following._id} 
-                                            className="connection-item"
+                                        <div
+                                            key={following._id}
+                                            className='connection-item'
                                             style={{
                                                 display: 'flex',
                                                 alignItems: 'center',
@@ -226,7 +242,7 @@ const MyProfile = () => {
                                             }}
                                             onClick={() => navigate(`/user/${following._id}`)}
                                         >
-                                            <img 
+                                            <img
                                                 src={following.profilePic || 'https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png'}
                                                 alt={following.username}
                                                 style={{
@@ -250,6 +266,14 @@ const MyProfile = () => {
                     </div>
                 )}
             </div>
+
+            <EditPostModal
+                open={!!editingPost}
+                post={editingPost || { media: [], caption: '' }}
+                token={token}
+                onClose={() => setEditingPost(null)}
+                onSaved={updated => handleSaved(updated)}
+            />
         </div>
     )
 }
