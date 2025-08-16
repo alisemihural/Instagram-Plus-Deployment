@@ -23,5 +23,5 @@ COPY --from=build-frontend /app/my-app/dist /app/server/client
 
 ENV NODE_ENV=production
 WORKDIR /app/server
-EXPOSE 3000
+EXPOSE 5000
 CMD ["node", "index.js"]
