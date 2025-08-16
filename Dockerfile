@@ -11,6 +11,7 @@ FROM node:20 AS install-backend
 WORKDIR /app
 COPY server/package*.json ./server/
 RUN cd server && npm install --omit=dev
+COPY server ./server
 
 # 3) Final image
 FROM node:20
