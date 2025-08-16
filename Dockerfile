@@ -2,7 +2,7 @@
 FROM node:20 AS build-frontend
 WORKDIR /app
 COPY my-app/package*.json ./my-app/
-RUN cd my-app && npm ci
+RUN cd my-app && npm install
 COPY my-app ./my-app
 RUN cd my-app && npm run build    # outputs dist/
 
@@ -10,7 +10,7 @@ RUN cd my-app && npm run build    # outputs dist/
 FROM node:20 AS install-backend
 WORKDIR /app
 COPY server/package*.json ./server/
-RUN cd server && npm ci --omit=dev
+RUN cd server && npm install --omit=dev
 
 # 3) Final image
 FROM node:20
