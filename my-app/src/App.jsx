@@ -17,6 +17,7 @@ import MyProfile from './components/MyProfile.jsx'
 import DiscoverUsers from './components/DiscoverUsers.jsx'
 import UserProfile from './components/UserProfile.jsx'
 import Stories from './components/Stories.jsx'
+import Messages from './components/Messages.jsx'
 
 function App() {
     const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -77,6 +78,10 @@ const MainLayout = ({ isLoggedIn, setIsLoggedIn }) => {
                     <Route
                         path="/create_story"
                         element={isLoggedIn ? <Stories /> : <Navigate to="/login" />}
+                    />
+                    <Route
+                    path="/messages"
+                    element={isLoggedIn ? <Messages /> : <Navigate to="/login" />}
                     />
                 </Routes>
             </div>
