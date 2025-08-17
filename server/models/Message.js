@@ -1,4 +1,3 @@
-// Path: ./server/models/Message.js
 import mongoose from 'mongoose'
 const { ObjectId } = mongoose.Schema.Types
 
