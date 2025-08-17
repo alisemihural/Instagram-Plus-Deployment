@@ -11,7 +11,7 @@ export const register = async (req, res) => {
         if (existingUser) return res.status(400).json({ message: 'User already exists' })
 
         const hashedPassword = await bcrypt.hash(password, 12)
-        createdUser = await User.create({ username, email, password: hashedPassword })
+        createdUser = await User.create({ username, email, password: hashedPassword, profilePic: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png' })
 
         res.status(201).json({ result: createdUser })
     } catch (err) {
