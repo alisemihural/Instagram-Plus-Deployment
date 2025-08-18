@@ -51,7 +51,7 @@ const UserProfile = () => {
         setIsFollowLoading(true)
         try {
             const token = localStorage.getItem('token')
-            await axios.patch(`http://localhost:5000/users/${user._id}/follow`, {}, {
+            await axios.patch(`${API_BASE_URL}/users/${user._id}/follow`, {}, {
                 headers: { Authorization: `Bearer ${token}` }
             })
 
@@ -60,7 +60,7 @@ const UserProfile = () => {
             setUser(userRes.data)
 
             // Refresh current user data
-            const currentUserRes = await axios.get('http://localhost:5000/users/profile', {
+            const currentUserRes = await axios.get(`${API_BASE_URL}/users/profile`, {
                 headers: { Authorization: `Bearer ${token}` }
             })
             setCurrentUser(currentUserRes.data)

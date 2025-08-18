@@ -24,7 +24,7 @@ function Stories() {
         if (story) {
             try {
                 const token = localStorage.getItem('token');
-                await axios.post('http://localhost:5000/stories', {
+                await axios.post(`${API_BASE_URL}/stories`, {
                     story
                 }, {
                     headers: {

@@ -80,7 +80,7 @@ const DiscoverUsers = () => {
 
             // Update search results if searching
             if (searchQuery.trim() !== '') {
-                const searchRes = await axios.get(`http://localhost:5000/users/search/${encodeURIComponent(searchQuery)}`)
+                const searchRes = await axios.get(`${API_BASE_URL}/users/search/${encodeURIComponent(searchQuery)}`)
                 setSearchResults(searchRes.data)
             }
         } catch (err) {

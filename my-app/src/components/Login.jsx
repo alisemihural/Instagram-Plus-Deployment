@@ -12,7 +12,7 @@ const Login = ({ setIsLoggedIn }) => {
         e.preventDefault()
 
         try {
-            const res = await axios.post('http://localhost:5000/auth/login', {
+            const res = await axios.post(`${API_BASE_URL}/auth/login`, {
                 email,
                 password
             })

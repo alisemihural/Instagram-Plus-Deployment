@@ -21,7 +21,7 @@ const MyProfile = () => {
                 setUser(userRes.data)
 
                 // Fetch user's posts
-                const postsRes = await axios.get(`http://localhost:5000/posts/user/${userRes.data._id}`)
+                const postsRes = await axios.get(`${API_BASE_URL}/posts/user/${userRes.data._id}`)
                 setUserPosts(postsRes.data)
 
             } catch (err) {

@@ -382,7 +382,7 @@ const Home = () => {
         try {
             const token = localStorage.getItem('token')
             if (token) {
-                const res = await axios.get('http://localhost:5000/users/profile', {
+                const res = await axios.get(`${API_BASE_URL}/users/profile`, {
                     headers: { Authorization: `Bearer ${token}` }
                 })
                 setCurrentUser(res.data)

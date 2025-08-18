@@ -15,7 +15,7 @@ dotenv.config()
 
 // Simple and clean CORS configuration
 app.use(cors({
-    origin: true,
+    origin: 'https://instaplus.up.railway.app',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token', 'Origin', 'X-Requested-With', 'Accept']

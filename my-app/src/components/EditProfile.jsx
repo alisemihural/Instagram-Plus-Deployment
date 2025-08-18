@@ -45,7 +45,7 @@ const EditProfile = () => {
         e.preventDefault()
         try {
             const token = localStorage.getItem('token')
-            await axios.patch('http://localhost:5000/users/editProfile', {
+            await axios.patch(`${API_BASE_URL}/users/editProfile`, {
                 username,
                 profilePic
             }, {
