@@ -45,11 +45,6 @@ app.use('/stories', storyRoutes)
 // Serve static files from the React app build directory
 app.use(express.static('client'))
 
-// Catch all handler: send back React's index.html file for any non-API routes
-app.get('*', (req, res) => {
-    res.sendFile('index.html', { root: 'client' })
-})
-
 const PORT = process.env.PORT || 5000
 
 mongoose.connect(process.env.CONNECTION_URL)
