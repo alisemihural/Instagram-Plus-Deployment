@@ -44,6 +44,26 @@ app.use('/stories', storyRoutes)
 // Serve static files from the React app build directory
 app.use(express.static('client'))
 
+// Catch all handler: send back React's index.html file for any non-API routes
+// Use a safer approach without wildcards
+app.use((req, res, next) => {
+    // Only serve index.html for GET requests that don't start with /api, /auth, etc.
+    if (req.method === 'GET' && 
+        !req.path.startsWith('/auth') && 
+        !req.path.startsWith('/posts') && 
+        !req.path.startsWith('/users') && 
+        !req.path.startsWith('/upload') && 
+        !req.path.startsWith('/stories') && 
+        !req.path.startsWith('/test') &&
+        !req.path.includes('.')) { // Skip files with extensions (CSS, JS, images)
+        
+        return res.sendFile('index.html', { root: 'client' })
+    }
+    
+    // If it's an API route that doesn't exist, return 404
+    next()
+})
+
 const PORT = process.env.PORT || 5000
 
 mongoose.connect(process.env.CONNECTION_URL)
