@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import './home.css'
+import AdBanner from './components/AdBanner'
 
 const PostCarousel = ({ items, legacyImage, author, createdAt, caption, currentUser, onFollowToggle }) => {
     const [index, setIndex] = useState(0)
@@ -407,32 +408,40 @@ const Home = () => {
 
 
     return (
-        <div className="feed-container">
-            {stories.length === 0 ? (<p>No stories yet</p>) : (
-                stories.map(eachStory => (
-                    <div className='story' key={eachStory._id}>
-                        <img src={eachStory.story} alt="Story" className="story-image" />
-                    </div>
-                ))
-            )}
-            {posts.length === 0 ? (
-                <p>No posts yet</p>
-            ) : (
-                posts.map(post => (
-                    <div key={post._id} style={{ marginBottom: '36px' }}>
-                        <PostCarousel
-                            items={post.media}
-                            legacyImage={post.image}
-                            author={post.author}
-                            createdAt={post.createdAt}
-                            caption={post.caption}
-                            currentUser={currentUser}
-                            onFollowToggle={handleFollowToggle}
-                        />
-                        <PostInteractions post={{ ...post, currentUserId: userId }} token={token} />
-                    </div>
-                ))
-            )}
+        <div className="home-container">
+            <div className="ad-banner-left">
+                <AdBanner />
+            </div>
+            <div className="feed-container">
+                {stories.length === 0 ? (<p>No stories yet</p>) : (
+                    stories.map(eachStory => (
+                        <div className='story' key={eachStory._id}>
+                            <img src={eachStory.story} alt="Story" className="story-image" />
+                        </div>
+                    ))
+                )}
+                {posts.length === 0 ? (
+                    <p>No posts yet</p>
+                ) : (
+                    posts.map(post => (
+                        <div key={post._id} style={{ marginBottom: '36px' }}>
+                            <PostCarousel
+                                items={post.media}
+                                legacyImage={post.image}
+                                author={post.author}
+                                createdAt={post.createdAt}
+                                caption={post.caption}
+                                currentUser={currentUser}
+                                onFollowToggle={handleFollowToggle}
+                            />
+                            <PostInteractions post={{ ...post, currentUserId: userId }} token={token} />
+                        </div>
+                    ))
+                )}
+            </div>
+            <div className="ad-banner-right">
+                <AdBanner />
+            </div>
         </div>
     )
 }
