@@ -43,3 +43,10 @@
 a:hover {
     cursor: pointer;
 }
+
+.story-content {
+    text-align: center;
+    align-items: center;
+    justify-content: center;
+    border: '1px solid black';
+}

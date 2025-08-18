@@ -11,12 +11,12 @@ const Home = () => {
     const [storiesProfile, setStoriesProfile] = useState([])
     const [storiesLoaded, setStoriesLoaded] = useState(false)
     const [showStorySlides, setShowStorySlides] = useState(false)
-    const [currentStory, setCurrentStory] = useState(0)
+    const [currentStory, setCurrentStory] = useState('')
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
 
-    const openStorySlides = (e) => {
-        e.preventDefault();
+    const openStorySlides = (param) => {
         setShowStorySlides(true);
+        setCurrentStory(param);
     }
 
     const closeStorySlides = () => setShowStorySlides(false);
@@ -103,7 +103,20 @@ const Home = () => {
     return (
         <div className='feed-container'>
             <Modal isOpen={showStorySlides} onRequestClose={closeStorySlides}>
-
+                {currentStory && (
+                    <div className='story-content'>
+                        {
+                            (stories[currentStory]).map((eachStory, index) => (
+                                <img
+                                    key={currentStory + index}
+                                    src={eachStory}
+                                    alt='Story'
+                                    style={{ width: "75%", height: "75%" }}
+                                />
+                            ))
+                        }
+                    </div>
+                )}
             </Modal>
             {storiesProfile.length === 0 ? (
                 <p>No stories yet</p>
@@ -111,7 +124,10 @@ const Home = () => {
                 <div style={{ display: 'flex', gap: 10, padding: '10px 6px', overflowX: 'auto', marginBottom: 16 }}>
                     {storiesProfile.map(s => (
                         <div key={s._id}>
-                            <a onClick={openStorySlides}>
+                            <a onClick={e => {
+                                    e.preventDefault
+                                    openStorySlides(s._id)
+                                }}>
                                 <div className='story' style={{ flex: '0 0 auto' }}>
                                     <img
                                         src={s.profilePic}
