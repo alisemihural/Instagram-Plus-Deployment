@@ -75,7 +75,7 @@ const DiscoverUsers = () => {
             setCurrentUser(userRes.data)
 
             // Update the users list
-            const usersRes = await axios.get('http://localhost:5000/users')
+            const usersRes = await axios.get('https://instaplus.up.railway.app/users')
             setUsers(usersRes.data)
 
             // Update search results if searching

@@ -14,7 +14,7 @@ const EditProfile = () => {
         const fetchProfile = async () => {
             try {
                 const token = localStorage.getItem('token')
-                const res = await axios.get('http://localhost:5000/users/profile', {
+                const res = await axios.get('https://instaplus.up.railway.app/users/profile', {
                     headers: { Authorization: `Bearer ${token}` }
                 })
 

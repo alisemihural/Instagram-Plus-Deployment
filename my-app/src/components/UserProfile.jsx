@@ -18,7 +18,7 @@ const UserProfile = () => {
                 const token = localStorage.getItem('token')
                 
                 // Fetch current user
-                const currentUserRes = await axios.get('http://localhost:5000/users/profile', {
+                const currentUserRes = await axios.get('https://instaplus.up.railway.app/users/profile', {
                     headers: { Authorization: `Bearer ${token}` }
                 })
                 setCurrentUser(currentUserRes.data)

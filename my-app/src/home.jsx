@@ -395,7 +395,7 @@ const Home = () => {
     useEffect(() => {
         const fetchFeed = async () => {
             try {
-                const res = await axios.get('http://localhost:5000/stories')
+                const res = await axios.get('https://instaplus.up.railway.app/stories')
                 setStories(res.data)
             } catch (err) {
                 console.error('Failed to fetch stories:', err)
