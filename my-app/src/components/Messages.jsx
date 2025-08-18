@@ -187,9 +187,12 @@ const Messages = () => {
                                 >
                                     <div className="message-header">
                                         <span className="timestamp">
-                                            {new Date(msg.createdAt).toLocaleTimeString([], {
+                                            {new Date(msg.createdAt).toLocaleString(undefined, {
+                                                month: 'short',
+                                                day: 'numeric',
                                                 hour: '2-digit',
-                                                minute: '2-digit'
+                                                minute: '2-digit',
+                                                hour12: true
                                             })}
                                         </span>
                                         {msg.edited && <span className="edited">(edited)</span>}
@@ -224,6 +227,12 @@ const Messages = () => {
                                 value={newMessage}
                                 onChange={(e) => setNewMessage(e.target.value)}
                                 placeholder="Type a message..."
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    sendMessage();
+                                    }
+                                }}
                             />
                             <button onClick={sendMessage}>Send</button>
                         </div>
