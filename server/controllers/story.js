@@ -65,10 +65,10 @@ export const getUserStories = async (req, res) => {
                 } else {
                     for (const eachStoryId of eachFollowing.stories) {
                         const eachStory = await Story.findById(eachStoryId);
-                        if (!storiesObjects[req.userId]) {
-                            storiesObjects[req.userId] = [eachStory];
+                        if (!storiesObjects[eachStory.author]) {
+                            storiesObjects[eachStory.author] = [eachStory.story];
                         } else {
-                            (storiesObjects[req.userId]).push(eachStory);
+                            (storiesObjects[eachStory.author]).push(eachStory.story);
                         }
                     }
                 }
