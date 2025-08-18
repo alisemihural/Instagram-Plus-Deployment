@@ -4,6 +4,8 @@ WORKDIR /app
 COPY my-app/package*.json ./my-app/
 RUN cd my-app && npm install
 COPY my-app ./my-app
+# Set empty API base URL for production (uses relative URLs)
+ENV VITE_API_BASE_URL=""
 RUN cd my-app && npm run build    # outputs dist/
 
 # 2) Install backend deps

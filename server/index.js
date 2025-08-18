@@ -15,7 +15,13 @@ dotenv.config()
 
 // Configure CORS first, before body parsers
 app.use(cors({
-    origin: true, // Allow all origins for now
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        
+        // Allow all origins in development and production
+        return callback(null, true);
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token', 'Origin', 'X-Requested-With', 'Accept'],
@@ -25,9 +31,25 @@ app.use(cors({
 app.use(bodyParser.json({ limit: '30mb', extended: true }))
 app.use(bodyParser.urlencoded({ limit: '30mb', extended: true }))
 
+// Handle preflight requests for all routes
+app.options('*', (req, res) => {
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,PATCH,OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,x-auth-token,Origin,X-Requested-With,Accept');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.sendStatus(200);
+});
+
 // Debug middleware to log all requests
 app.use((req, res, next) => {
     console.log(`${req.method} ${req.path} - Origin: ${req.get('Origin')}`);
+    
+    // Add CORS headers to all responses as fallback
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,PATCH,OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,x-auth-token,Origin,X-Requested-With,Accept');
+    
     next();
 });
 
