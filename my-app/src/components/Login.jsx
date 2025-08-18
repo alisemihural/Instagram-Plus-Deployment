@@ -12,7 +12,7 @@ const Login = ({ setIsLoggedIn }) => {
         e.preventDefault()
 
         try {
-            const res = await axios.post(`${API_BASE_URL}/auth/login`, {
+            const res = await axios.post('https://instaplus.up.railway.app/auth/login', {
                 email,
                 password
             })

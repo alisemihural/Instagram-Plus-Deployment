@@ -70,7 +70,7 @@ const CreatePost = () => {
         const token = localStorage.getItem('token')
         const formData = new FormData()
         formData.append('file', file)
-        const up = await axios.post('http://localhost:5000/upload/video', formData, {
+        const up = await axios.post('https://instaplus.up.railway.app/upload/video', formData, {
             headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
         })
         return up.data.url
@@ -208,7 +208,7 @@ const CreatePost = () => {
         try {
             const token = localStorage.getItem('token')
             await axios.post(
-                `${API_BASE_URL}/posts`,
+                'https://instaplus.up.railway.app/posts',
                 { caption, media },
                 { headers: { Authorization: `Bearer ${token}` } }
             )

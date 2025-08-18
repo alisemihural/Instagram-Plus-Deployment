@@ -24,11 +24,11 @@ const UserProfile = () => {
                 setCurrentUser(currentUserRes.data)
 
                 // Fetch target user
-                const userRes = await axios.get(`http://localhost:5000/users/${userId}`)
+                const userRes = await axios.get(`https://instaplus.up.railway.app/users/${userId}`)
                 setUser(userRes.data)
 
                 // Fetch user's posts
-                const postsRes = await axios.get(`http://localhost:5000/posts/user/${userId}`)
+                const postsRes = await axios.get(`https://instaplus.up.railway.app/posts/user/${userId}`)
                 setUserPosts(postsRes.data)
 
             } catch (err) {
@@ -51,16 +51,16 @@ const UserProfile = () => {
         setIsFollowLoading(true)
         try {
             const token = localStorage.getItem('token')
-            await axios.patch(`${API_BASE_URL}/users/${user._id}/follow`, {}, {
+            await axios.patch(`https://instaplus.up.railway.app/users/${user._id}/follow`, {}, {
                 headers: { Authorization: `Bearer ${token}` }
             })
 
             // Refresh user data
-            const userRes = await axios.get(`http://localhost:5000/users/${userId}`)
+            const userRes = await axios.get(`https://instaplus.up.railway.app/users/${userId}`)
             setUser(userRes.data)
 
             // Refresh current user data
-            const currentUserRes = await axios.get(`${API_BASE_URL}/users/profile`, {
+            const currentUserRes = await axios.get(`https://instaplus.up.railway.app/users/profile`, {
                 headers: { Authorization: `Bearer ${token}` }
             })
             setCurrentUser(currentUserRes.data)

@@ -24,7 +24,7 @@ function Stories() {
         if (story) {
             try {
                 const token = localStorage.getItem('token');
-                await axios.post(`${API_BASE_URL}/stories`, {
+                await axios.post('https://instaplus.up.railway.app/stories', {
                     story
                 }, {
                     headers: {

@@ -45,7 +45,7 @@ const EditProfile = () => {
         e.preventDefault()
         try {
             const token = localStorage.getItem('token')
-            await axios.patch(`${API_BASE_URL}/users/editProfile`, {
+            await axios.patch('https://instaplus.up.railway.app/users/editProfile', {
                 username,
                 profilePic
             }, {
