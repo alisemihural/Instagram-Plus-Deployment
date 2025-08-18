@@ -14,7 +14,7 @@ const DiscoverUsers = () => {
             try {
                 const token = localStorage.getItem('token')
                 if (token) {
-                    const res = await axios.get('http://localhost:5000/users/profile', {
+                    const res = await axios.get('https://instaplus.up.railway.app/users/profile', {
                         headers: { Authorization: `Bearer ${token}` }
                     })
                     setCurrentUser(res.data)
@@ -26,7 +26,7 @@ const DiscoverUsers = () => {
 
         const fetchUsers = async () => {
             try {
-                const res = await axios.get('http://localhost:5000/users')
+                const res = await axios.get('https://instaplus.up.railway.app/users')
                 setUsers(res.data)
             } catch (err) {
                 console.error('Failed to fetch users:', err)
@@ -47,7 +47,7 @@ const DiscoverUsers = () => {
 
             setIsSearching(true)
             try {
-                const res = await axios.get(`http://localhost:5000/users/search/${encodeURIComponent(searchQuery)}`)
+                const res = await axios.get(`https://instaplus.up.railway.app/users/search/${encodeURIComponent(searchQuery)}`)
                 setSearchResults(res.data)
             } catch (err) {
                 console.error('Failed to search users:', err)
@@ -64,12 +64,12 @@ const DiscoverUsers = () => {
     const handleFollowToggle = async (userId) => {
         try {
             const token = localStorage.getItem('token')
-            await axios.patch(`http://localhost:5000/users/${userId}/follow`, {}, {
+            await axios.patch(`https://instaplus.up.railway.app/users/${userId}/follow`, {}, {
                 headers: { Authorization: `Bearer ${token}` }
             })
 
             // Refresh current user data
-            const userRes = await axios.get('http://localhost:5000/users/profile', {
+            const userRes = await axios.get('https://instaplus.up.railway.app/users/profile', {
                 headers: { Authorization: `Bearer ${token}` }
             })
             setCurrentUser(userRes.data)

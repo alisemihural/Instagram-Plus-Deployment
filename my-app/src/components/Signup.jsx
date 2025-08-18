@@ -23,7 +23,7 @@ const Signup = () => {
         console.log('email', email)
 
         try {
-            const res = await axios.post(`${API_BASE_URL}/auth/register`, {
+            const res = await axios.post('https://instaplus.up.railway.app/auth/register', {
                 username,
                 email,
                 password
