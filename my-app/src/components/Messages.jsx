@@ -11,6 +11,9 @@ const Messages = () => {
     const [showNewMsgModal, setShowNewMsgModal] = useState(false)
     const [usersList, setUsersList] = useState([])
 
+    const [editingMessageId, setEditingMessageId] = useState(null)
+    const [editText, setEditText] = useState('')
+
     const token = localStorage.getItem('token')
 
     useEffect(() => {
@@ -44,7 +47,7 @@ const Messages = () => {
         const fetchMessages = async () => {
             if (!selectedConv) return
             try {
-                const res = await axios.get(`http://localhost:5000/messages/messages/${selectedConv._id}`, {
+                const res = await axios.get(`http://localhost:5000/messages/${selectedConv._id}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 })
                 setMessages(res.data)
@@ -60,7 +63,7 @@ const Messages = () => {
         if (!newMessage.trim()) return
         try {
             const res = await axios.post(
-                `http://localhost:5000/messages/messages/${selectedConv._id}`,
+                `http://localhost:5000/messages/${selectedConv._id}`,
                 { text: newMessage },
                 { headers: { Authorization: `Bearer ${token}` } }
             )
@@ -68,6 +71,37 @@ const Messages = () => {
             setNewMessage('')
         } catch (err) {
             console.error('Failed to send message:', err)
+        }
+    }
+
+    const deleteMessage = async (messageId) => {
+        try {
+            await axios.delete(`http://localhost:5000/messages/${messageId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            setMessages(prev => prev.filter(m => m._id !== messageId))
+        } catch (err) {
+            console.error('Failed to delete message:', err)
+        }
+    }
+
+    const startEdit = (msg) => {
+        setEditingMessageId(msg._id)
+        setEditText(msg.text)
+    }
+
+    const saveEdit = async () => {
+        try {
+            const res = await axios.patch(`http://localhost:5000/messages/${editingMessageId}`, {
+                text: editText
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            setMessages(prev => prev.map(m => m._id === editingMessageId ? res.data : m))
+            setEditingMessageId(null)
+            setEditText('')
+        } catch (err) {
+            console.error('Failed to edit message:', err)
         }
     }
 
@@ -111,13 +145,9 @@ const Messages = () => {
 
     return (
         <div className="messages-container">
-            {/* Sidebar */}
             <div className="sidebar">
                 <h3>Conversations</h3>
-                <button
-                    onClick={() => fetchFollowUsers(currentUserId)}
-                    style={{ marginBottom: 10 }}
-                >
+                <button onClick={() => fetchFollowUsers(currentUserId)} style={{ marginBottom: 10 }}>
                     New Message
                 </button>
 
@@ -138,11 +168,7 @@ const Messages = () => {
                     <div className="new-message-modal">
                         <h4>Select a user to message</h4>
                         {usersList.map(user => (
-                            <div
-                                key={user._id}
-                                className="conversation"
-                                onClick={() => startConversation(user._id)}
-                            >
+                            <div key={user._id} className="conversation" onClick={() => startConversation(user._id)}>
                                 {user.username}
                             </div>
                         ))}
@@ -150,7 +176,6 @@ const Messages = () => {
                 )}
             </div>
 
-            {/* Chat window */}
             <div className="chat-window">
                 {selectedConv ? (
                     <>
@@ -159,11 +184,40 @@ const Messages = () => {
                                 <div
                                     key={msg._id}
                                     className={`message ${msg.sender?._id === currentUserId || msg.sender === currentUserId ? 'sent' : 'received'}`}
-                                    >
-                                    {msg.text}
+                                >
+                                    <div className="message-header">
+                                        <span className="timestamp">
+                                            {new Date(msg.createdAt).toLocaleTimeString([], {
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            })}
+                                        </span>
+                                        {msg.edited && <span className="edited">(edited)</span>}
+                                    </div>
+                                    {editingMessageId === msg._id ? (
+                                        <div className="edit-area">
+                                            <input
+                                                value={editText}
+                                                onChange={(e) => setEditText(e.target.value)}
+                                            />
+                                            <button onClick={saveEdit}>Save</button>
+                                            <button onClick={() => setEditingMessageId(null)}>Cancel</button>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div>{msg.text}</div>
+                                            {msg.sender === currentUserId || msg.sender?._id === currentUserId ? (
+                                                <div className="message-actions">
+                                                    <button onClick={() => startEdit(msg)}>Edit</button>
+                                                    <button onClick={() => deleteMessage(msg._id)}>Delete</button>
+                                                </div>
+                                            ) : null}
+                                        </>
+                                    )}
                                 </div>
                             ))}
                         </div>
+
                         <div className="input-area">
                             <input
                                 type="text"

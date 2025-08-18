@@ -88,3 +88,30 @@
     padding-top: 10px;
     border-top: 1px solid #ccc;
 }
+
+.timestamp {
+    font-size: 0.75em;
+    color: #888;
+}
+
+.edited {
+    font-size: 0.7em;
+    color: #666;
+    margin-left: 6px;
+}
+
+.message-actions {
+    margin-top: 5px;
+    font-size: 0.8em;
+}
+
+.message-actions button {
+    margin-right: 5px;
+    padding: 2px 5px;
+}
+
+.edit-area {
+    display: flex;
+    gap: 6px;
+    margin-top: 5px;
+}
