@@ -3,6 +3,7 @@ import bodyParser from 'body-parser'
 import mongoose from 'mongoose'
 import cors from 'cors'
 import dotenv from 'dotenv'
+import compression from 'compression'
 
 import authRoutes from './routes/auth.js'
 import postRoutes from './routes/posts.js'
@@ -21,6 +22,8 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token', 'Origin', 'X-Requested-With', 'Accept'],
     optionsSuccessStatus: 200
 }))
+
+app.use(compression())
 
 app.use(bodyParser.json({ limit: '30mb', extended: true }))
 app.use(bodyParser.urlencoded({ limit: '30mb', extended: true }))

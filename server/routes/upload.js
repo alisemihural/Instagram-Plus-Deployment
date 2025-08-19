@@ -1,42 +1,64 @@
 import express from 'express'
-import multer from 'multer'
-import { v2 as cloudinary } from 'cloudinary'
 import auth from '../middleware/auth.js'
-import dotenv from 'dotenv'
-dotenv.config()
-
-cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET
-})
+import multer from 'multer'
+import streamifier from 'streamifier'
+import cloudinary from '../cloudinary.js'
 
 const router = express.Router()
-const storage = multer.memoryStorage()
-const upload = multer({ storage })
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 200 * 1024 * 1024, files: 5 }
+})
 
-router.post('/video', auth, upload.single('file'), async (req, res) => {
+const uploadToCloudinary = (buffer, folder) => new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+        { folder, resource_type: 'auto' },
+        (err, result) => err ? reject(err) : resolve(result)
+    )
+    streamifier.createReadStream(buffer).pipe(stream)
+})
+
+router.post('/media', auth, upload.array('files', 5), async (req, res) => {
     try {
-        const stream = cloudinary.uploader.upload_stream(
-            { resource_type: 'video', folder: 'instagram_videos' },
-            (error, result) => {
-                if (error) return res.status(500).json({ message: 'Upload failed', error })
-                res.status(200).json({ url: result.secure_url, publicId: result.public_id })
-            }
-        )
-        stream.end(req.file.buffer)
-    } catch (err) {
-        res.status(500).json({ message: err.message })
+        if (!req.files?.length) return res.status(400).json({ message: 'no files' })
+        const out = []
+        for (const f of req.files) {
+            const r = await uploadToCloudinary(f.buffer, 'instagram_plus')
+            out.push({
+                kind: r.resource_type === 'video' ? 'video' : 'image',
+                src: r.secure_url,
+                publicId: r.public_id,
+                width: r.width,
+                height: r.height,
+                duration: r.duration
+            })
+        }
+        res.status(201).json({ media: out })
+    } catch (e) {
+        console.error('upload error', e)
+        res.status(500).json({ message: 'upload failed' })
     }
 })
 
-router.delete('/video/:publicId', auth, async (req, res) => {
+const destroyAsset = async publicId => {
+    let resp = await cloudinary.uploader.destroy(publicId)
+    if (resp.result !== 'ok' && resp.result !== 'not found') {
+        resp = await cloudinary.uploader.destroy(publicId, { resource_type: 'video' })
+    }
+    return resp
+}
+
+router.delete('/media', auth, async (req, res) => {
     try {
-        const { publicId } = req.params
-        await cloudinary.uploader.destroy(publicId, { resource_type: 'video' })
-        res.status(200).json({ ok: true })
-    } catch (err) {
-        res.status(500).json({ message: err.message })
+        const { publicIds = [] } = req.body || {}
+        const results = []
+        for (const pid of publicIds) {
+            results.push(await destroyAsset(pid))
+        }
+        res.json({ ok: true, results })
+    } catch (e) {
+        console.error('destroy error', e)
+        res.status(500).json({ message: 'delete failed' })
     }
 })
 

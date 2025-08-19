@@ -13,9 +13,17 @@ const PostCard = ({ post, token, currentUserId, currentUser, onFollowChange }) =
     ), [doc])
 
     const [index, setIndex] = useState(0)
-    const [likesCount, setLikesCount] = useState(doc.likes?.length || 0)
-    const [liked, setLiked] = useState((doc.likes || []).some(u => (u?._id || u)?.toString() === (currentUserId || '').toString()))
-    const [commentsCount, setCommentsCount] = useState(doc.comments?.length || 0)
+    const [likesCount, setLikesCount] = useState(
+        doc.likesCount ?? (doc.likes?.length || 0)
+    )
+    const [liked, setLiked] = useState(
+        typeof doc.isLiked === 'boolean'
+            ? doc.isLiked
+            : (doc.likes || []).some(u => (u?._id || u)?.toString() === (currentUserId || '').toString())
+    )
+    const [commentsCount, setCommentsCount] = useState(
+        doc.commentsCount ?? (doc.comments?.length || 0)
+    )
     const [modalOpen, setModalOpen] = useState(false)
 
     const [isFollowing, setIsFollowing] = useState(false)
@@ -35,11 +43,11 @@ const PostCard = ({ post, token, currentUserId, currentUser, onFollowChange }) =
     const updatedAt = doc.updatedAt ? fmt(doc.updatedAt) : ''
     const isEdited = doc.updatedAt && doc.createdAt && new Date(doc.updatedAt) - new Date(doc.createdAt) > 60000
 
+    const headers = { Authorization: `Bearer ${token}` }
+
     const handleLike = async () => {
         try {
-            const res = await axios.patch(`http://localhost:5000/posts/${doc._id}/like`, {}, {
-                headers: { Authorization: `Bearer ${token}` }
-            })
+            const res = await axios.patch(`http://localhost:5000/posts/${doc._id}/like`, {}, { headers })
             const arr = res.data.likes || []
             setLikesCount(arr.length)
             setLiked(arr.some(u => (u?._id || u)?.toString() === (currentUserId || '').toString()))
@@ -53,9 +61,7 @@ const PostCard = ({ post, token, currentUserId, currentUser, onFollowChange }) =
         if (doc.author._id === currentUserId) return
         try {
             setFollowBusy(true)
-            await axios.patch(`http://localhost:5000/users/${doc.author._id}/follow`, {}, {
-                headers: { Authorization: `Bearer ${token}` }
-            })
+            await axios.patch(`http://localhost:5000/users/${doc.author._id}/follow`, {}, { headers })
             setIsFollowing(v => !v)
             onFollowChange && onFollowChange()
         } catch (err) {
@@ -68,12 +74,16 @@ const PostCard = ({ post, token, currentUserId, currentUser, onFollowChange }) =
 
     const refreshPost = async () => {
         try {
-            const res = await axios.get(`http://localhost:5000/posts/${doc._id}`)
+            const res = await axios.get(`http://localhost:5000/posts/${doc._id}`, { headers })
             const fresh = res.data
             setDoc(fresh)
-            setLikesCount((fresh.likes || []).length)
-            setLiked((fresh.likes || []).some(u => (u?._id || u)?.toString() === (currentUserId || '').toString()))
-            setCommentsCount((fresh.comments || []).length)
+            setLikesCount(fresh.likesCount ?? (fresh.likes || []).length)
+            setLiked(
+                typeof fresh.isLiked === 'boolean'
+                    ? fresh.isLiked
+                    : (fresh.likes || []).some(u => (u?._id || u)?.toString() === (currentUserId || '').toString())
+            )
+            setCommentsCount(fresh.commentsCount ?? (fresh.comments || []).length)
             setIndex(0)
         } catch (err) {
             console.error('Failed to refresh post:', err)

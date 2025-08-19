@@ -1,55 +1,126 @@
+// create/update/delete posts without base64, delete Cloudinary on removal
+import mongoose from 'mongoose'
 import Post from '../models/Post.js'
-import { v2 as cloudinary } from 'cloudinary'
-import dotenv from 'dotenv'
-dotenv.config()
+import cloudinary from '../cloudinary.js'
 
-cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET
-})
-
-export const createPost = async (req, res) => {
-    const { caption, media } = req.body
-
-    if (!req.userId) return res.status(401).json({ message: 'Unauthorized' })
-    if (!Array.isArray(media) || media.length === 0) {
-        return res.status(400).json({ message: 'Provide 1-5 media items' })
-    }
-    if (media.length > 5) {
-        return res.status(400).json({ message: 'Maximum 5 media items per post' })
-    }
-
-    for (const m of media) {
-        if (!m?.kind || !m?.src) return res.status(400).json({ message: 'Each media needs kind and src' })
-        if (m.kind === 'image' && !m.src.startsWith('data:image/')) {
-            return res.status(400).json({ message: 'Images must be base64 data URLs' })
-        }
-        if (m.kind === 'video' && !/^https?:\/\//.test(m.src)) {
-            return res.status(400).json({ message: 'Videos must be a URL' })
-        }
-    }
-
+const safeDestroy = async publicId => {
     try {
-        const newPost = await Post.create({
-            author: req.userId,
-            caption,
-            media
-        })
-        res.status(201).json(newPost)
-    } catch (err) {
-        console.error('Error creating post:', err)
-        res.status(500).json({ message: err.message })
+        let r = await cloudinary.uploader.destroy(publicId)
+        if (r.result !== 'ok' && r.result !== 'not found') {
+            r = await cloudinary.uploader.destroy(publicId, { resource_type: 'video' })
+        }
+        return r
+    } catch (e) {
+        console.error('safeDestroy', e)
+        return null
     }
 }
 
-
 export const getFeed = async (req, res) => {
     try {
-        const posts = await Post.find().populate('author', 'username profilePic').sort({ createdAt: -1 })
-        res.status(200).json(posts)
+        const viewerId = new mongoose.Types.ObjectId(req.userId)
+        const limit = Math.min(parseInt(req.query.limit || '10', 10), 25)
+        const cursor = req.query.cursor ? new Date(req.query.cursor) : null
+
+        const pipeline = cursor
+            ? [{ $match: { createdAt: { $lt: cursor } } }, { $sort: { createdAt: -1, _id: -1 } }, { $limit: limit }]
+            : [{ $sort: { createdAt: -1, _id: -1 } }, { $limit: limit }]
+
+        pipeline.push(
+            { $lookup: { from: 'users', localField: 'author', foreignField: '_id', as: 'author' } },
+            { $unwind: '$author' },
+            {
+                $project: {
+                    caption: 1,
+                    media: {
+                        $map: {
+                            input: '$media',
+                            as: 'm',
+                            in: { kind: '$$m.kind', src: '$$m.src', publicId: '$$m.publicId', width: '$$m.width', height: '$$m.height', duration: '$$m.duration' }
+                        }
+                    },
+                    createdAt: 1,
+                    updatedAt: 1,
+                    author: { _id: '$author._id', username: '$author.username', profilePic: '$author.profilePic' },
+                    likesCount: { $size: { $ifNull: ['$likes', []] } },
+                    commentsCount: { $size: { $ifNull: ['$comments', []] } },
+                    isLiked: { $in: [viewerId, { $ifNull: ['$likes', []] }] }
+                }
+            }
+        )
+
+        const items = await Post.aggregate(pipeline).hint({ createdAt: -1, _id: -1 }).allowDiskUse(true)
+        const nextCursor = items.length === limit ? items[items.length - 1].createdAt : null
+        res.status(200).json({ items, nextCursor })
     } catch (err) {
-        res.status(500).json({ message: err.message })
+        console.error('getFeed error', err)
+        res.status(500).json({ message: 'server error' })
+    }
+}
+
+export const getPost = async (req, res) => {
+    try {
+        const post = await Post.findById(req.params.id)
+            .populate('author', 'username profilePic')
+            .populate('comments.user', 'username profilePic')
+            .populate('comments.replies.user', 'username profilePic')
+        if (!post) return res.status(404).json({ message: 'not found' })
+        res.json(post)
+    } catch (e) {
+        console.error('getPost', e)
+        res.status(500).json({ message: 'server error' })
+    }
+}
+
+export const createPost = async (req, res) => {
+    try {
+        const { caption = '', media = [] } = req.body
+        if (!Array.isArray(media) || media.length === 0) return res.status(400).json({ message: 'media required' })
+        if (media.some(m => typeof m?.src !== 'string' || m.src.startsWith('data:'))) {
+            return res.status(400).json({ message: 'base64 not allowed, upload to /upload/media first' })
+        }
+        const doc = await Post.create({ author: req.userId, caption, media })
+        const populated = await Post.findById(doc._id).populate('author', 'username profilePic')
+        res.status(201).json(populated)
+    } catch (e) {
+        console.error('createPost', e)
+        res.status(500).json({ message: 'server error' })
+    }
+}
+
+export const updatePost = async (req, res) => {
+    try {
+        const { caption, media, removedPublicIds = [] } = req.body
+        const post = await Post.findById(req.params.id)
+        if (!post) return res.status(404).json({ message: 'not found' })
+        if (post.author.toString() !== req.userId) return res.status(403).json({ message: 'forbidden' })
+        if (Array.isArray(media) && media.some(m => typeof m?.src !== 'string' || m.src.startsWith('data:'))) {
+            return res.status(400).json({ message: 'base64 not allowed' })
+        }
+        if (typeof caption === 'string') post.caption = caption
+        if (Array.isArray(media)) post.media = media
+        await post.save()
+        for (const pid of removedPublicIds) await safeDestroy(pid)
+        const populated = await Post.findById(post._id).populate('author', 'username profilePic')
+        res.json(populated)
+    } catch (e) {
+        console.error('updatePost', e)
+        res.status(500).json({ message: 'server error' })
+    }
+}
+
+export const deletePost = async (req, res) => {
+    try {
+        const post = await Post.findById(req.params.id)
+        if (!post) return res.status(404).json({ message: 'not found' })
+        if (post.author.toString() !== req.userId) return res.status(403).json({ message: 'forbidden' })
+        const pids = (post.media || []).map(m => m.publicId).filter(Boolean)
+        await post.deleteOne()
+        for (const pid of pids) await safeDestroy(pid)
+        res.json({ ok: true })
+    } catch (e) {
+        console.error('deletePost', e)
+        res.status(500).json({ message: 'server error' })
     }
 }
 
@@ -60,20 +131,6 @@ export const getUserPosts = async (req, res) => {
         res.status(200).json(posts)
     } catch (err) {
         res.status(500).json({ message: err.message })
-    }
-}
-
-export const getPost = async (req, res) => {
-    try {
-        const post = await Post.findById(req.params.id)
-            .populate('author', 'username profilePic')
-            .populate('comments.user', 'username profilePic')
-            .populate('comments.replies.user', 'username profilePic')
-        if (!post) return res.status(404).json({ message: 'Post not found' })
-        res.status(200).json(post)
-    } catch (err) {
-        console.error('Error fetching post:', err)
-        res.status(500).json({ message: 'Server error' })
     }
 }
 
@@ -92,78 +149,6 @@ export const likePost = async (req, res) => {
         await post.save()
         res.status(200).json(post)
     } catch (err) {
-        res.status(500).json({ message: err.message })
-    }
-}
-
-export const updatePost = async (req, res) => {
-    const { id } = req.params
-    const { caption, media, removedPublicIds = [] } = req.body
-
-    if (!req.userId) return res.status(401).json({ message: 'Unauthorized' })
-    if (!Array.isArray(media) || media.length < 1 || media.length > 5) {
-        return res.status(400).json({ message: 'Media must be between 1 and 5 items' })
-    }
-    for (const m of media) {
-        if (!m?.kind || !m?.src) return res.status(400).json({ message: 'Each media needs kind and src' })
-        if (m.kind === 'image' && !m.src.startsWith('data:image/')) {
-            return res.status(400).json({ message: 'Images must be base64 data URLs' })
-        }
-        if (m.kind === 'video' && !/^https?:\/\//.test(m.src)) {
-            return res.status(400).json({ message: 'Videos must be a URL' })
-        }
-    }
-
-    try {
-        const post = await Post.findById(id)
-        if (!post) return res.status(404).json({ message: 'Post not found' })
-        if (post.author.toString() !== req.userId) {
-            return res.status(403).json({ message: 'Forbidden' })
-        }
-
-        if (Array.isArray(removedPublicIds) && removedPublicIds.length > 0) {
-            await Promise.all(
-                removedPublicIds.map(pid => cloudinary.uploader.destroy(pid, { resource_type: 'video' }).catch(() => null))
-            )
-        }
-
-        post.caption = caption ?? post.caption
-        post.media = media
-        await post.save()
-
-        const populated = await Post.findById(post._id).populate('author', 'username profilePic')
-        res.status(200).json(populated)
-    } catch (err) {
-        console.error('Error updating post:', err)
-        res.status(500).json({ message: err.message })
-    }
-}
-
-export const deletePost = async (req, res) => {
-    const { id } = req.params
-    if (!req.userId) return res.status(401).json({ message: 'Unauthorized' })
-
-    try {
-        const post = await Post.findById(id)
-        if (!post) return res.status(404).json({ message: 'Post not found' })
-        if (post.author.toString() !== req.userId) {
-            return res.status(403).json({ message: 'Forbidden' })
-        }
-
-        const videoPublicIds = (post.media || [])
-            .filter(m => m.kind === 'video' && m.publicId)
-            .map(m => m.publicId)
-
-        if (videoPublicIds.length) {
-            await Promise.all(
-                videoPublicIds.map(pid => cloudinary.uploader.destroy(pid, { resource_type: 'video' }).catch(() => null))
-            )
-        }
-
-        await post.deleteOne()
-        res.status(200).json({ ok: true })
-    } catch (err) {
-        console.error('Error deleting post:', err)
         res.status(500).json({ message: err.message })
     }
 }

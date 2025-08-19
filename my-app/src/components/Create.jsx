@@ -34,13 +34,8 @@ const CreatePost = () => {
     const fileInputRef = useRef(null)
     const navigate = useNavigate()
 
-    const fileToDataUrl = file =>
-        new Promise((resolve, reject) => {
-            const reader = new FileReader()
-            reader.onloadend = () => resolve(reader.result)
-            reader.onerror = reject
-            reader.readAsDataURL(file)
-        })
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+    const headers = { Authorization: `Bearer ${token}` }
 
     const addWithRoom = files => {
         const room = MAX_MEDIA - media.length
@@ -48,21 +43,21 @@ const CreatePost = () => {
         return files.slice(0, room)
     }
 
-    const uploadVideo = async file => {
-        const token = localStorage.getItem('token')
-        const formData = new FormData()
-        formData.append('file', file)
-        const up = await axios.post('http://localhost:5000/upload/video', formData, {
-            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
+    const uploadFiles = async files => {
+        const fd = new FormData()
+        files.forEach(f => fd.append('files', f))
+        const res = await axios.post('http://localhost:5000/upload/media', fd, {
+            headers: { ...headers, 'Content-Type': 'multipart/form-data' }
         })
-        return { url: up.data.url, publicId: up.data.publicId }
+        return res.data?.media || []
     }
 
-    const deleteVideo = async publicId => {
-        const token = localStorage.getItem('token')
+    const deleteByPublicIds = async publicIds => {
+        if (!publicIds?.length) return
         try {
-            await axios.delete(`http://localhost:5000/upload/video/${encodeURIComponent(publicId)}`, {
-                headers: { Authorization: `Bearer ${token}` }
+            await axios.delete('http://localhost:5000/upload/media', {
+                headers,
+                data: { publicIds }
             })
         } catch (e) {
             console.error('Cloud delete failed', e)
@@ -71,7 +66,7 @@ const CreatePost = () => {
 
     const handleFileChange = async e => {
         if (isUploading) {
-            setStatus('A video is processing — please wait…')
+            setStatus('An upload is in progress — please wait…')
             return
         }
 
@@ -84,86 +79,104 @@ const CreatePost = () => {
             return
         }
 
-        setStatus('Processing files…')
+        // add placeholders
+        const startIndex = media.length
+        const placeholders = list.map(f => ({
+            kind: f.type.startsWith('video/') ? 'video' : 'image',
+            src: '',
+            uploading: true
+        }))
 
-        for (const file of list) {
-            if (file.type.startsWith('image/')) {
-                const dataUrl = await fileToDataUrl(file)
-                const updated = [...media, { kind: 'image', src: dataUrl }]
-                setMedia(updated)
-                setCurrent(updated.length - 1)
-            } else if (file.type.startsWith('video/')) {
-                const placeholderIndex = media.length
-                const withPlaceholder = [...media, { kind: 'video', src: '', uploading: true }]
-                setMedia(withPlaceholder)
-                setCurrent(withPlaceholder.length - 1)
-                setIsUploading(true)
+        setMedia(prev => {
+            const updated = [...prev, ...placeholders]
+            setCurrent(updated.length - 1)
+            return updated
+        })
 
-                try {
-                    const { url, publicId } = await uploadVideo(file)
-                    setMedia(prev => {
-                        const copy = [...prev]
-                        if (copy[placeholderIndex]) {
-                            copy[placeholderIndex] = { kind: 'video', src: url, publicId, uploading: false }
-                        }
-                        return copy
-                    })
-                } catch (err) {
-                    console.error(err)
-                    setStatus('Video upload failed')
-                    setMedia(prev => prev.filter((_, i) => i !== placeholderIndex))
-                    setCurrent(prev => Math.max(0, Math.min(prev, withPlaceholder.length - 2)))
-                } finally {
-                    setIsUploading(false)
+        setIsUploading(true)
+        setStatus('Uploading…')
+
+        try {
+            const uploaded = await uploadFiles(list) // [{kind, src, publicId, ...}]
+            setMedia(prev => {
+                const copy = [...prev]
+                for (let i = 0; i < uploaded.length; i++) {
+                    const at = startIndex + i
+                    if (copy[at]) copy[at] = { ...uploaded[i], uploading: false }
                 }
-            }
+                return copy
+            })
+            setStatus('Ready to post')
+        } catch (err) {
+            console.error(err)
+            // remove placeholders that failed
+            setMedia(prev => prev.filter((_, i) => i < startIndex || i >= startIndex + placeholders.length))
+            setCurrent(prev => Math.max(0, Math.min(prev, startIndex - 1)))
+            setStatus('Upload failed')
+        } finally {
+            setIsUploading(false)
+            if (fileInputRef.current) fileInputRef.current.value = ''
         }
-
-        setStatus('Ready to post')
-        if (fileInputRef.current) fileInputRef.current.value = ''
     }
 
     const handlePaste = async e => {
         if (isUploading) {
-            setStatus('A video is processing — please wait before pasting another image')
+            setStatus('An upload is in progress — please wait before pasting')
             return
         }
 
-        const file = e.clipboardData?.files?.[0]
-        if (file && file.type.startsWith('image/')) {
-            e.preventDefault()
-            if (media.length >= MAX_MEDIA) {
-                setStatus(`You can upload up to ${MAX_MEDIA} items`)
-                return
+        const filesFromClipboard = []
+        const dtFiles = Array.from(e.clipboardData?.files || [])
+        for (const f of dtFiles) {
+            if (f.type.startsWith('image/') || f.type.startsWith('video/')) {
+                filesFromClipboard.push(f)
             }
-            setStatus('Loading pasted image…')
-            const dataUrl = await fileToDataUrl(file)
-            const updated = [...media, { kind: 'image', src: dataUrl }]
-            setMedia(updated)
+        }
+
+        if (!filesFromClipboard.length) return
+        e.preventDefault()
+
+        const list = addWithRoom(filesFromClipboard)
+        if (!list.length) {
+            setStatus(`You can upload up to ${MAX_MEDIA} items`)
+            return
+        }
+
+        // placeholders
+        const startIndex = media.length
+        const placeholders = list.map(f => ({
+            kind: f.type.startsWith('video/') ? 'video' : 'image',
+            src: '',
+            uploading: true
+        }))
+
+        setMedia(prev => {
+            const updated = [...prev, ...placeholders]
             setCurrent(updated.length - 1)
-            setStatus('Ready to post')
-            return
-        }
+            return updated
+        })
 
-        const items = e.clipboardData?.items || []
-        for (let i = 0; i < items.length; i++) {
-            const it = items[i]
-            if (it.kind === 'file' && it.type.startsWith('image/')) {
-                e.preventDefault()
-                if (media.length >= MAX_MEDIA) {
-                    setStatus(`You can upload up to ${MAX_MEDIA} items`)
-                    return
+        setIsUploading(true)
+        setStatus('Uploading…')
+
+        try {
+            const uploaded = await uploadFiles(list)
+            setMedia(prev => {
+                const copy = [...prev]
+                for (let i = 0; i < uploaded.length; i++) {
+                    const at = startIndex + i
+                    if (copy[at]) copy[at] = { ...uploaded[i], uploading: false }
                 }
-                setStatus('Loading pasted image…')
-                const blob = it.getAsFile()
-                if (!blob) continue
-                const dataUrl = await fileToDataUrl(blob)
-                const updated = [...media, { kind: 'image', src: dataUrl }]
-                setMedia(updated)
-                setCurrent(updated.length - 1)
-                setStatus('Ready to post')
-                return
-            }
+                return copy
+            })
+            setStatus('Ready to post')
+        } catch (err) {
+            console.error(err)
+            setMedia(prev => prev.filter((_, i) => i < startIndex || i >= startIndex + placeholders.length))
+            setCurrent(prev => Math.max(0, Math.min(prev, startIndex - 1)))
+            setStatus('Upload failed')
+        } finally {
+            setIsUploading(false)
         }
     }
 
@@ -179,8 +192,9 @@ const CreatePost = () => {
 
     const removeAt = async idx => {
         const item = media[idx]
-        if (item?.kind === 'video' && item.publicId && !item.uploading) {
-            await deleteVideo(item.publicId)
+        if (item?.uploading) return
+        if (item?.publicId) {
+            await deleteByPublicIds([item.publicId])
         }
         const updated = media.filter((_, i) => i !== idx)
         setMedia(updated)
@@ -191,49 +205,47 @@ const CreatePost = () => {
     const handleSubmit = async e => {
         e.preventDefault()
         if (isUploading) {
-            setStatus('Please wait for the video to finish processing')
+            setStatus('Please wait for uploads to finish')
             return
         }
         if (media.length === 0) {
             setStatus('Add at least one image or video')
             return
         }
+
         try {
-            const token = localStorage.getItem('token')
             await axios.post(
                 'http://localhost:5000/posts',
                 { caption, media },
-                { headers: { Authorization: `Bearer ${token}` } }
+                { headers }
             )
             setSubmitted(true)
             alert('Post created')
             navigate('/')
         } catch (err) {
             console.error(err)
-            setStatus(err.response?.data?.message || 'Failed to create post')
-            const vids = media.filter(m => m.kind === 'video' && m.publicId && !m.uploading)
-            await Promise.all(vids.map(v => deleteVideo(v.publicId)))
+            setStatus(err.response?.data?.message || 'Failed to create post, rolling back uploads')
+            const pids = media.filter(m => m.publicId && !m.uploading).map(m => m.publicId)
+            await deleteByPublicIds(pids)
         }
     }
 
     useEffect(() => {
         const beforeUnload = () => {
             if (submitted) return
-            media.forEach(m => {
-                if (m.kind === 'video' && m.publicId && !m.uploading) {
-                    deleteVideo(m.publicId)
-                }
-            })
+            const pids = media.filter(m => m.publicId && !m.uploading).map(m => m.publicId)
+            if (pids.length) navigator.sendBeacon?.(
+                'http://localhost:5000/upload/media',
+                new Blob([JSON.stringify({ publicIds: pids })], { type: 'application/json' })
+            )
         }
+
         window.addEventListener('beforeunload', beforeUnload)
         return () => {
             window.removeEventListener('beforeunload', beforeUnload)
             if (!submitted) {
-                media.forEach(m => {
-                    if (m.kind === 'video' && m.publicId && !m.uploading) {
-                        deleteVideo(m.publicId)
-                    }
-                })
+                const pids = media.filter(m => m.publicId && !m.uploading).map(m => m.publicId)
+                deleteByPublicIds(pids)
             }
         }
     }, [media, submitted])
@@ -259,11 +271,11 @@ const CreatePost = () => {
                     userSelect: 'none'
                 }}
                 role='button'
-                aria-label={isUploading ? 'Uploading, paste disabled' : 'Paste image here'}
+                aria-label={isUploading ? 'Uploading, paste disabled' : 'Paste media here'}
             >
                 {isUploading
-                    ? 'Uploading video… please wait'
-                    : 'Press Ctrl/Cmd+V to paste an image, or use the file selector below'}
+                    ? 'Uploading… please wait'
+                    : 'Press Ctrl/Cmd+V to paste an image/video, or use the file selector below'}
             </div>
 
             <form onSubmit={handleSubmit}>
@@ -311,7 +323,7 @@ const CreatePost = () => {
                         <div style={{ display: 'flex', gap: 8, overflowX: 'auto', marginTop: 8 }}>
                             {media.map((m, i) => (
                                 <div
-                                    key={i}
+                                    key={m.publicId || `ph-${i}`}
                                     onClick={() => setCurrent(i)}
                                     style={{
                                         border: i === current ? '2px solid #333' : '1px solid #ddd',
@@ -339,7 +351,19 @@ const CreatePost = () => {
                                             </div>
                                         )
                                         : (
-                                            <img src={m.src} alt={`thumb-${i}`} style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 4 }} />
+                                            m.uploading
+                                                ? <div style={{
+                                                    width: 64,
+                                                    height: 64,
+                                                    borderRadius: 4,
+                                                    background: '#000',
+                                                    color: '#fff',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    fontSize: 12
+                                                }}>Uploading…</div>
+                                                : <img src={m.src} alt={`thumb-${i}`} style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 4 }} />
                                         )}
                                 </div>
                             ))}

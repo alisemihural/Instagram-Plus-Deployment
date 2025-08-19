@@ -4,13 +4,13 @@ import { createPost, getFeed, likePost, addComment, getComments, getUserPosts, u
 
 const router = express.Router()
 
-router.get('/', getFeed)
-router.get('/user/:userId', getUserPosts)
+router.get('/', auth, getFeed)
+router.get('/user/:userId', auth, getUserPosts)
 router.post('/', auth, createPost)
 router.patch('/:id/like', auth, likePost)
 router.patch('/:id', auth, updatePost)
 router.delete('/:id', auth, deletePost)
-router.get('/:id', getPost)
+router.get('/:id', auth, getPost)
 router.get('/:id/comments', auth, getComments)
 router.post('/:id/comments', auth, addComment)
 router.patch('/:id/comments/:commentId/like', auth, likeComment)

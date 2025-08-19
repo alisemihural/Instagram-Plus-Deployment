@@ -94,7 +94,13 @@ export default function EditPostModal({ open, post, token, onClose, onSaved }) {
     const [isUploading, setIsUploading] = useState(false)
     const [current, setCurrent] = useState(0)
 
-    const fileInputRef = useRef(null)
+    const addInputRef = useRef(null)
+    const replaceInputRef = useRef(null)
+
+    const initialPidSetRef = useRef(new Set((post.media || []).map(m => m.publicId).filter(Boolean)))
+    const newUploadsRef = useRef(new Set())
+
+    const headers = { Authorization: `Bearer ${token}` }
 
     useEffect(() => {
         setCaption(post.caption || '')
@@ -109,23 +115,31 @@ export default function EditPostModal({ open, post, token, onClose, onSaved }) {
         setStatus('')
         setIsUploading(false)
         setCurrent(0)
+        initialPidSetRef.current = new Set((post.media || []).map(m => m.publicId).filter(Boolean))
+        newUploadsRef.current = new Set()
+        if (addInputRef.current) addInputRef.current.value = ''
+        if (replaceInputRef.current) replaceInputRef.current.value = ''
     }, [post, open])
 
-    const fileToDataUrl = file =>
-        new Promise((resolve, reject) => {
-            const reader = new FileReader()
-            reader.onloadend = () => resolve(reader.result)
-            reader.onerror = reject
-            reader.readAsDataURL(file)
+    const uploadFiles = async files => {
+        const fd = new FormData()
+        files.forEach(f => fd.append('files', f))
+        const res = await axios.post('http://localhost:5000/upload/media', fd, {
+            headers: { ...headers, 'Content-Type': 'multipart/form-data' }
         })
+        return res.data?.media || []
+    }
 
-    const uploadVideo = async file => {
-        const formData = new FormData()
-        formData.append('file', file)
-        const up = await axios.post('http://localhost:5000/upload/video', formData, {
-            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
-        })
-        return { url: up.data.url, publicId: up.data.publicId }
+    const deleteByPublicIds = async publicIds => {
+        if (!publicIds?.length) return
+        try {
+            await axios.delete('http://localhost:5000/upload/media', {
+                headers,
+                data: { publicIds }
+            })
+        } catch (e) {
+            console.error('cloud delete failed', e)
+        }
     }
 
     const addWithRoom = files => {
@@ -134,10 +148,9 @@ export default function EditPostModal({ open, post, token, onClose, onSaved }) {
         return files.slice(0, room)
     }
 
-    /* Add files (multiple) like Create.jsx, preserving spinner flow for videos */
-    const handleFileChange = async e => {
+    const handleAddFiles = async e => {
         if (isUploading) {
-            setStatus('A video is processing — please wait…')
+            setStatus('An upload is in progress — please wait…')
             return
         }
 
@@ -150,96 +163,106 @@ export default function EditPostModal({ open, post, token, onClose, onSaved }) {
             return
         }
 
-        setStatus('Processing files…')
+        const startIndex = media.length
+        const placeholders = list.map(f => ({
+            kind: f.type.startsWith('video/') ? 'video' : 'image',
+            src: '',
+            uploading: true
+        }))
 
-        for (const file of list) {
-            if (file.type.startsWith('image/')) {
-                const dataUrl = await fileToDataUrl(file)
-                const updated = [...media, { kind: 'image', src: dataUrl }]
-                setMedia(updated)
-                setCurrent(updated.length - 1)
-            } else if (file.type.startsWith('video/')) {
-                const placeholderIndex = media.length
-                const withPlaceholder = [...media, { kind: 'video', src: '', uploading: true }]
-                setMedia(withPlaceholder)
-                setCurrent(withPlaceholder.length - 1)
-                setIsUploading(true)
+        setMedia(prev => {
+            const updated = [...prev, ...placeholders]
+            setCurrent(updated.length - 1)
+            return updated
+        })
 
-                try {
-                    const { url, publicId } = await uploadVideo(file)
-                    setMedia(prev => {
-                        const copy = [...prev]
-                        if (copy[placeholderIndex]) {
-                            copy[placeholderIndex] = { kind: 'video', src: url, publicId, uploading: false }
-                        }
-                        return copy
-                    })
-                } catch (err) {
-                    console.error(err)
-                    setStatus('Video upload failed')
-                    setMedia(prev => prev.filter((_, i) => i !== placeholderIndex))
-                    setCurrent(prev => Math.max(0, Math.min(prev, withPlaceholder.length - 2)))
-                } finally {
-                    setIsUploading(false)
+        setIsUploading(true)
+        setStatus('Uploading…')
+
+        try {
+            const uploaded = await uploadFiles(list)
+            uploaded.forEach(u => {
+                if (u.publicId && !initialPidSetRef.current.has(u.publicId)) {
+                    newUploadsRef.current.add(u.publicId)
                 }
-            }
+            })
+            setMedia(prev => {
+                const copy = [...prev]
+                for (let i = 0; i < uploaded.length; i++) {
+                    const at = startIndex + i
+                    if (copy[at]) copy[at] = { ...uploaded[i], uploading: false }
+                }
+                return copy
+            })
+            setStatus('Ready to save')
+        } catch (err) {
+            console.error(err)
+            setMedia(prev => prev.filter((_, i) => i < startIndex || i >= startIndex + placeholders.length))
+            setCurrent(prev => Math.max(0, Math.min(prev, startIndex - 1)))
+            setStatus('Upload failed')
+        } finally {
+            setIsUploading(false)
+            if (addInputRef.current) addInputRef.current.value = ''
         }
-
-        setStatus('Ready to save')
-        if (fileInputRef.current) fileInputRef.current.value = ''
     }
 
-    /* Replace the current item with a new file (image or video) */
-    const replaceCurrent = async file => {
+    const handleReplace = async e => {
+        const file = e.target.files?.[0]
         if (!file || isUploading || media.length === 0) return
         const idx = current
         const old = media[idx]
 
-        if (file.type.startsWith('image/')) {
-            const dataUrl = await fileToDataUrl(file)
-            if (old?.kind === 'video' && old.publicId) {
-                setRemovedPublicIds(prev => [...prev, old.publicId])
-            }
-            setMedia(prev => prev.map((m, i) => i === idx ? { kind: 'image', src: dataUrl } : m))
-            setStatus('Ready to save')
-            return
-        }
+        setIsUploading(true)
+        setStatus('Uploading…')
+        try {
+            const [uploaded] = await uploadFiles([file])
+            if (!uploaded) throw new Error('no upload response')
 
-        if (file.type.startsWith('video/')) {
-            setIsUploading(true)
-            setStatus('Uploading video…')
-            try {
-                const { url, publicId } = await uploadVideo(file)
-                if (old?.kind === 'video' && old.publicId) {
-                    setRemovedPublicIds(prev => [...prev, old.publicId])
-                }
-                setMedia(prev => prev.map((m, i) => i === idx ? { kind: 'video', src: url, publicId } : m))
-                setStatus('Ready to save')
-            } catch {
-                setStatus('Video upload failed')
-            } finally {
-                setIsUploading(false)
+            if (uploaded.publicId && !initialPidSetRef.current.has(uploaded.publicId)) {
+                newUploadsRef.current.add(uploaded.publicId)
             }
+
+            if (old?.publicId && initialPidSetRef.current.has(old.publicId)) {
+                setRemovedPublicIds(prev => [...prev, old.publicId])
+            } else if (old?.publicId && newUploadsRef.current.has(old.publicId)) {
+                await deleteByPublicIds([old.publicId])
+                newUploadsRef.current.delete(old.publicId)
+            }
+
+            setMedia(prev => prev.map((m, i) => i === idx ? { ...uploaded, uploading: false } : m))
+            setStatus('Ready to save')
+        } catch (err) {
+            console.error(err)
+            setStatus('Upload failed')
+        } finally {
+            setIsUploading(false)
+            if (replaceInputRef.current) replaceInputRef.current.value = ''
         }
     }
 
-    /* Remove the current item (track Cloudinary publicId for cleanup if needed) */
-    const removeCurrent = () => {
+    const removeCurrent = async () => {
         const idx = current
         const item = media[idx]
-        if (item?.kind === 'video' && item.publicId) {
-            setRemovedPublicIds(prev => [...prev, item.publicId])
+        if (!item) return
+
+        if (item.publicId) {
+            if (initialPidSetRef.current.has(item.publicId)) {
+                setRemovedPublicIds(prev => [...prev, item.publicId])
+            } else if (newUploadsRef.current.has(item.publicId)) {
+                await deleteByPublicIds([item.publicId])
+                newUploadsRef.current.delete(item.publicId)
+            }
         }
+
         const updated = media.filter((_, i) => i !== idx)
         setMedia(updated)
         if (updated.length === 0) setCurrent(0)
         else setCurrent(Math.min(idx, updated.length - 1))
     }
 
-    /* Save to backend (PATCH), mirroring constraints from Create + your controllers */
     const handleSave = async () => {
         if (isUploading) {
-            setStatus('Please wait for the video to finish processing')
+            setStatus('Please wait for uploads to finish')
             return
         }
         if (media.length < 1) {
@@ -253,14 +276,21 @@ export default function EditPostModal({ open, post, token, onClose, onSaved }) {
 
         try {
             const payload = { caption, media, removedPublicIds }
-            const res = await axios.patch(`http://localhost:5000/posts/${post._id}`, payload, {
-                headers: { Authorization: `Bearer ${token}` }
-            })
+            const res = await axios.patch(`http://localhost:5000/posts/${post._id}`, payload, { headers })
+            newUploadsRef.current.clear()
             onSaved && onSaved(res.data)
-            onClose && onClose()
+            onClose && onClose(true)
         } catch (e) {
             setStatus(e.response?.data?.message || 'Failed to save changes')
         }
+    }
+
+    const handleCancel = async () => {
+        if (isUploading) return
+        const toDelete = Array.from(newUploadsRef.current)
+        if (toDelete.length) await deleteByPublicIds(toDelete)
+        newUploadsRef.current.clear()
+        onClose && onClose(false)
     }
 
     const cur = media[current]
@@ -268,12 +298,12 @@ export default function EditPostModal({ open, post, token, onClose, onSaved }) {
     return (
         <AnimatePresence>
             {open && (
-                <Backdrop onClose={() => onClose && onClose()} disabled={isUploading}>
+                <Backdrop onClose={handleCancel} disabled={isUploading}>
                     <ModalCard>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                             <div style={{ fontSize: 18, fontWeight: 700 }}>Edit Post</div>
                             <button
-                                onClick={() => !isUploading && onClose && onClose()}
+                                onClick={handleCancel}
                                 disabled={isUploading}
                                 style={{
                                     fontSize: 18,
@@ -289,11 +319,11 @@ export default function EditPostModal({ open, post, token, onClose, onSaved }) {
                         </div>
 
                         <input
-                            ref={fileInputRef}
+                            ref={addInputRef}
                             type='file'
                             accept='image/*,video/*'
                             multiple
-                            onChange={handleFileChange}
+                            onChange={handleAddFiles}
                             disabled={isUploading}
                             style={{ display: 'block', marginBottom: 10, opacity: isUploading ? 0.6 : 1 }}
                         />
@@ -317,17 +347,17 @@ export default function EditPostModal({ open, post, token, onClose, onSaved }) {
                                         <button
                                             type='button'
                                             onClick={() => {
-                                                if (!isUploading && fileInputRef.current) fileInputRef.current.click()
+                                                if (!isUploading && replaceInputRef.current) replaceInputRef.current.click()
                                             }}
                                             disabled={isUploading || media.length === 0}
                                         >
                                             Replace
                                         </button>
-                                        
                                         <input
+                                            ref={replaceInputRef}
                                             type='file'
                                             accept='image/*,video/*'
-                                            onChange={e => replaceCurrent(e.target.files?.[0])}
+                                            onChange={handleReplace}
                                             disabled={isUploading || media.length === 0}
                                             style={{ display: 'none' }}
                                         />
@@ -353,7 +383,7 @@ export default function EditPostModal({ open, post, token, onClose, onSaved }) {
                                 <div style={{ display: 'flex', gap: 8, overflowX: 'auto', marginTop: 8 }}>
                                     {media.map((m, i) => (
                                         <div
-                                            key={i}
+                                            key={m.publicId || `idx-${i}`}
                                             onClick={() => setCurrent(i)}
                                             style={{
                                                 border: i === current ? '2px solid #333' : '1px solid #ddd',
@@ -381,7 +411,19 @@ export default function EditPostModal({ open, post, token, onClose, onSaved }) {
                                                     </div>
                                                 )
                                                 : (
-                                                    <img src={m.src} alt={`thumb-${i}`} style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 4 }} />
+                                                    m.uploading
+                                                        ? <div style={{
+                                                            width: 64,
+                                                            height: 64,
+                                                            borderRadius: 4,
+                                                            background: '#000',
+                                                            color: '#fff',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            fontSize: 12
+                                                        }}>Uploading…</div>
+                                                        : <img src={m.src} alt={`thumb-${i}`} style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 4 }} />
                                                 )}
                                         </div>
                                     ))}
@@ -407,7 +449,7 @@ export default function EditPostModal({ open, post, token, onClose, onSaved }) {
                                 Save Changes
                             </button>
                             <button
-                                onClick={() => !isUploading && onClose && onClose()}
+                                onClick={handleCancel}
                                 disabled={isUploading}
                                 style={{ opacity: isUploading ? 0.6 : 1, cursor: isUploading ? 'not-allowed' : 'pointer' }}
                             >
