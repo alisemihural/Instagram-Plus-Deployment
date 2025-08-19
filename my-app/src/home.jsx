@@ -34,11 +34,10 @@ const Home = () => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
     const authHeaders = token ? { Authorization: `Bearer ${token}` } : {}
 
-    const openStorySlides = e => {
-        e.preventDefault()
+    const openStorySlides = authorId => {
+        setCurrentStory(authorId)
         setShowStorySlides(true)
     }
-
     const closeStorySlides = () => setShowStorySlides(false)
 
     const previousStory = () => {
@@ -198,9 +197,9 @@ const Home = () => {
                     {storiesProfile.map(s => (
                         <div key={s._id}>
                             <a onClick={e => {
-                                    e.preventDefault
-                                    openStorySlides(s._id)
-                                }}>
+                                e.preventDefault()
+                                openStorySlides(s._id)
+                            }}>
                                 <div className='story' style={{ flex: '0 0 auto' }}>
                                     <img
                                         src={s.profilePic}

@@ -28,7 +28,6 @@ const CreatePost = () => {
     const [status, setStatus] = useState('')
     const [current, setCurrent] = useState(0)
     const [isUploading, setIsUploading] = useState(false)
-    const [submitted, setSubmitted] = useState(false)
 
     const pasteZoneRef = useRef(null)
     const fileInputRef = useRef(null)
@@ -36,6 +35,9 @@ const CreatePost = () => {
 
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
     const headers = { Authorization: `Bearer ${token}` }
+
+    const newUploadsRef = useRef(new Set())
+    const submittedRef = useRef(false)
 
     const addWithRoom = files => {
         const room = MAX_MEDIA - media.length
@@ -79,12 +81,12 @@ const CreatePost = () => {
             return
         }
 
-        // add placeholders
         const startIndex = media.length
         const placeholders = list.map(f => ({
             kind: f.type.startsWith('video/') ? 'video' : 'image',
             src: '',
-            uploading: true
+            uploading: true,
+            name: f.name || ''
         }))
 
         setMedia(prev => {
@@ -98,18 +100,20 @@ const CreatePost = () => {
 
         try {
             const uploaded = await uploadFiles(list) // [{kind, src, publicId, ...}]
+            uploaded.forEach(u => {
+                if (u.publicId) newUploadsRef.current.add(u.publicId)
+            })
             setMedia(prev => {
                 const copy = [...prev]
                 for (let i = 0; i < uploaded.length; i++) {
                     const at = startIndex + i
-                    if (copy[at]) copy[at] = { ...uploaded[i], uploading: false }
+                    if (copy[at]) copy[at] = { ...uploaded[i], uploading: false, name: list[i]?.name || '' }
                 }
                 return copy
             })
             setStatus('Ready to post')
         } catch (err) {
             console.error(err)
-            // remove placeholders that failed
             setMedia(prev => prev.filter((_, i) => i < startIndex || i >= startIndex + placeholders.length))
             setCurrent(prev => Math.max(0, Math.min(prev, startIndex - 1)))
             setStatus('Upload failed')
@@ -142,12 +146,12 @@ const CreatePost = () => {
             return
         }
 
-        // placeholders
         const startIndex = media.length
         const placeholders = list.map(f => ({
             kind: f.type.startsWith('video/') ? 'video' : 'image',
             src: '',
-            uploading: true
+            uploading: true,
+            name: f.name || ''
         }))
 
         setMedia(prev => {
@@ -161,11 +165,14 @@ const CreatePost = () => {
 
         try {
             const uploaded = await uploadFiles(list)
+            uploaded.forEach(u => {
+                if (u.publicId) newUploadsRef.current.add(u.publicId)
+            })
             setMedia(prev => {
                 const copy = [...prev]
                 for (let i = 0; i < uploaded.length; i++) {
                     const at = startIndex + i
-                    if (copy[at]) copy[at] = { ...uploaded[i], uploading: false }
+                    if (copy[at]) copy[at] = { ...uploaded[i], uploading: false, name: list[i]?.name || '' }
                 }
                 return copy
             })
@@ -188,14 +195,19 @@ const CreatePost = () => {
         }
         window.addEventListener('paste', onWindowPaste)
         return () => window.removeEventListener('paste', onWindowPaste)
-    }, [media, isUploading])
+    }, [isUploading, media.length])
 
     const removeAt = async idx => {
         const item = media[idx]
         if (item?.uploading) return
+
         if (item?.publicId) {
-            await deleteByPublicIds([item.publicId])
+            if (newUploadsRef.current.has(item.publicId)) {
+                await deleteByPublicIds([item.publicId])
+                newUploadsRef.current.delete(item.publicId)
+            }
         }
+
         const updated = media.filter((_, i) => i !== idx)
         setMedia(updated)
         if (updated.length === 0) setCurrent(0)
@@ -214,41 +226,33 @@ const CreatePost = () => {
         }
 
         try {
-            await axios.post(
-                'http://localhost:5000/posts',
-                { caption, media },
-                { headers }
-            )
-            setSubmitted(true)
+            await axios.post('http://localhost:5000/posts', { caption, media }, { headers })
+
+            submittedRef.current = true
+            newUploadsRef.current.clear()
+
             alert('Post created')
             navigate('/')
         } catch (err) {
             console.error(err)
-            setStatus(err.response?.data?.message || 'Failed to create post, rolling back uploads')
-            const pids = media.filter(m => m.publicId && !m.uploading).map(m => m.publicId)
-            await deleteByPublicIds(pids)
+            setStatus(err.response?.data?.message || 'Failed to create post')
         }
     }
 
     useEffect(() => {
-        const beforeUnload = () => {
-            if (submitted) return
-            const pids = media.filter(m => m.publicId && !m.uploading).map(m => m.publicId)
-            if (pids.length) navigator.sendBeacon?.(
-                'http://localhost:5000/upload/media',
-                new Blob([JSON.stringify({ publicIds: pids })], { type: 'application/json' })
-            )
-        }
-
-        window.addEventListener('beforeunload', beforeUnload)
         return () => {
-            window.removeEventListener('beforeunload', beforeUnload)
-            if (!submitted) {
-                const pids = media.filter(m => m.publicId && !m.uploading).map(m => m.publicId)
-                deleteByPublicIds(pids)
+            if (!submittedRef.current) {
+                const ids = Array.from(newUploadsRef.current)
+                if (ids.length) {
+                    axios.delete('http://localhost:5000/upload/media', {
+                        headers,
+                        data: { publicIds: ids }
+                    }).catch(() => { })
+                    newUploadsRef.current.clear()
+                }
             }
         }
-    }, [media, submitted])
+    }, [])
 
     const cur = media[current]
 
@@ -333,6 +337,7 @@ const CreatePost = () => {
                                         minWidth: 64,
                                         opacity: m.uploading ? 0.6 : 1
                                     }}
+                                    title={m.kind === 'video' ? (m.name || 'video') : undefined}
                                 >
                                     {m.kind === 'video'
                                         ? (
@@ -345,9 +350,23 @@ const CreatePost = () => {
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
-                                                fontSize: 12
+                                                padding: 6
                                             }}>
-                                                {m.uploading ? 'Uploading…' : 'video'}
+                                                <span
+                                                    title={m.name || 'video'}
+                                                    style={{
+                                                        display: 'block',
+                                                        maxWidth: '100%',
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        whiteSpace: 'nowrap',
+                                                        fontSize: 11,
+                                                        lineHeight: 1.1,
+                                                        textAlign: 'center'
+                                                    }}
+                                                >
+                                                    {m.uploading ? 'Uploading…' : (m.name || 'video')}
+                                                </span>
                                             </div>
                                         )
                                         : (

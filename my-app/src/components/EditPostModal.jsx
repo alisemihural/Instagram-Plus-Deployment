@@ -80,7 +80,7 @@ const ModalCard = ({ children }) => (
 
 const MAX_MEDIA = 5
 
-export default function EditPostModal({ open, post, token, onClose, onSaved }) {
+export default function EditPostModal({ open, post, token, onClose, onSaved, onDeleted, refreshUserAndPosts }) {
     const [caption, setCaption] = useState(post.caption || '')
     const [media, setMedia] = useState(
         post.media?.length
@@ -96,6 +96,7 @@ export default function EditPostModal({ open, post, token, onClose, onSaved }) {
 
     const addInputRef = useRef(null)
     const replaceInputRef = useRef(null)
+    const pasteZoneRef = useRef(null)
 
     const initialPidSetRef = useRef(new Set((post.media || []).map(m => m.publicId).filter(Boolean)))
     const newUploadsRef = useRef(new Set())
@@ -260,6 +261,7 @@ export default function EditPostModal({ open, post, token, onClose, onSaved }) {
         else setCurrent(Math.min(idx, updated.length - 1))
     }
 
+    // ==== SAVE / CANCEL / DELETE ====
     const handleSave = async () => {
         if (isUploading) {
             setStatus('Please wait for uploads to finish')
@@ -279,6 +281,7 @@ export default function EditPostModal({ open, post, token, onClose, onSaved }) {
             const res = await axios.patch(`http://localhost:5000/posts/${post._id}`, payload, { headers })
             newUploadsRef.current.clear()
             onSaved && onSaved(res.data)
+            refreshUserAndPosts()
             onClose && onClose(true)
         } catch (e) {
             setStatus(e.response?.data?.message || 'Failed to save changes')
@@ -293,6 +296,88 @@ export default function EditPostModal({ open, post, token, onClose, onSaved }) {
         onClose && onClose(false)
     }
 
+    const handleDeletePost = async () => {
+        if (isUploading) return
+        const confirm = window.confirm('Delete this post permanently?')
+        if (!confirm) return
+        try {
+            const toDelete = Array.from(newUploadsRef.current)
+            if (toDelete.length) await deleteByPublicIds(toDelete)
+            newUploadsRef.current.clear()
+
+            await axios.delete(`http://localhost:5000/posts/${post._id}`, { headers })
+            onDeleted && onDeleted(post._id)
+            refreshUserAndPosts()
+            onClose && onClose(true)
+        } catch (e) {
+            console.error('delete post failed', e)
+            setStatus(e.response?.data?.message || 'Failed to delete post')
+        }
+    }
+
+    const handlePaste = async e => {
+        if (isUploading) {
+            setStatus('An upload is in progress — please wait…')
+            return
+        }
+
+        let file = e.clipboardData?.files?.[0] || null
+        if (!file) {
+            const items = e.clipboardData?.items || []
+            for (let i = 0; i < items.length; i++) {
+                const it = items[i]
+                if (it.kind === 'file' && it.type.startsWith('image/')) {
+                    file = it.getAsFile()
+                    break
+                }
+            }
+        }
+        if (!file || !file.type.startsWith('image/')) return
+
+        e.preventDefault()
+
+        if (media.length >= MAX_MEDIA) {
+            setStatus(`You can upload up to ${MAX_MEDIA} items`)
+            return
+        }
+
+        const startIndex = media.length
+        setMedia(prev => [...prev, { kind: 'image', src: '', uploading: true }])
+        setCurrent(startIndex)
+        setIsUploading(true)
+        setStatus('Uploading pasted image…')
+
+        try {
+            const [uploaded] = await uploadFiles([file])
+            if (uploaded?.publicId && !initialPidSetRef.current.has(uploaded.publicId)) {
+                newUploadsRef.current.add(uploaded.publicId)
+            }
+            setMedia(prev => {
+                const copy = [...prev]
+                copy[startIndex] = { ...uploaded, uploading: false }
+                return copy
+            })
+            setStatus('Ready to save')
+        } catch (err) {
+            console.error(err)
+            setMedia(prev => prev.filter((_, i) => i !== startIndex))
+            setCurrent(prev => Math.max(0, prev - 1))
+            setStatus('Upload failed')
+        } finally {
+            setIsUploading(false)
+        }
+    }
+
+    useEffect(() => {
+        const onWindowPaste = e => {
+            const tag = document.activeElement?.tagName
+            if (tag === 'INPUT' || tag === 'TEXTAREA') return
+            handlePaste(e)
+        }
+        window.addEventListener('paste', onWindowPaste)
+        return () => window.removeEventListener('paste', onWindowPaste)
+    }, [media, isUploading])
+
     const cur = media[current]
 
     return (
@@ -302,20 +387,44 @@ export default function EditPostModal({ open, post, token, onClose, onSaved }) {
                     <ModalCard>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                             <div style={{ fontSize: 18, fontWeight: 700 }}>Edit Post</div>
-                            <button
-                                onClick={handleCancel}
-                                disabled={isUploading}
-                                style={{
-                                    fontSize: 18,
-                                    lineHeight: 1,
-                                    opacity: isUploading ? 0.6 : 1,
-                                    cursor: isUploading ? 'not-allowed' : 'pointer',
-                                    background: 'transparent',
-                                    border: 'none'
-                                }}
-                            >
-                                ✕
-                            </button>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                <button
+                                    onClick={handleCancel}
+                                    disabled={isUploading}
+                                    style={{
+                                        fontSize: 18,
+                                        lineHeight: 1,
+                                        opacity: isUploading ? 0.6 : 1,
+                                        cursor: isUploading ? 'not-allowed' : 'pointer',
+                                        background: 'transparent',
+                                        border: 'none'
+                                    }}
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        </div>
+
+                        <div
+                            ref={pasteZoneRef}
+                            onPaste={handlePaste}
+                            tabIndex={isUploading ? -1 : 0}
+                            style={{
+                                border: '2px dashed #ccc',
+                                borderRadius: 8,
+                                padding: 12,
+                                marginBottom: 10,
+                                outline: 'none',
+                                opacity: isUploading ? 0.6 : 1,
+                                pointerEvents: isUploading ? 'none' : 'auto',
+                                userSelect: 'none'
+                            }}
+                            role='button'
+                            aria-label={isUploading ? 'Uploading, paste disabled' : 'Paste an image here'}
+                        >
+                            {isUploading
+                                ? 'Uploading… please wait'
+                                : 'Press Ctrl/Cmd+V to paste an image, or use the selectors below'}
                         </div>
 
                         <input
@@ -454,6 +563,20 @@ export default function EditPostModal({ open, post, token, onClose, onSaved }) {
                                 style={{ opacity: isUploading ? 0.6 : 1, cursor: isUploading ? 'not-allowed' : 'pointer' }}
                             >
                                 Cancel
+                            </button>
+                            <button
+                                onClick={handleDeletePost}
+                                disabled={isUploading}
+                                style={{
+                                    background: '#ffebee',
+                                    border: '1px solid #f44336',
+                                    color: '#c62828',
+                                    borderRadius: 6,
+                                    padding: '6px 10px',
+                                    cursor: isUploading ? 'not-allowed' : 'pointer'
+                                }}
+                            >
+                                Delete
                             </button>
                         </div>
 

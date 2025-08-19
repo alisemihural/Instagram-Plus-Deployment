@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import './UserProfile.css'
 import EditPostModal from './EditPostModal.jsx'
+
+const PAGE_SIZE = 12
 
 const MyProfile = () => {
     const navigate = useNavigate()
@@ -11,17 +13,53 @@ const MyProfile = () => {
     const [isLoading, setIsLoading] = useState(true)
     const [editingPost, setEditingPost] = useState(null)
 
+    // pagination for user's posts
+    const [cursor, setCursor] = useState(null)
+    const [hasMore, setHasMore] = useState(true)
+    const [loadingMore, setLoadingMore] = useState(false)
+    const inFlightRef = useRef(false)
+
     const token = localStorage.getItem('token')
+    const authHeaders = token ? { Authorization: `Bearer ${token}` } : {}
+
+    const loadUserPosts = async (uid, initial = false) => {
+        if (inFlightRef.current || (!hasMore && !initial)) return
+        inFlightRef.current = true
+        setLoadingMore(true)
+        try {
+            const res = await axios.get(`http://localhost:5000/posts/user/${uid}`, {
+                params: { limit: PAGE_SIZE, cursor: initial ? undefined : cursor },
+                headers: { Authorization: `Bearer ${token}` }
+            })
+
+            const items = Array.isArray(res.data) ? res.data : res.data.items || []
+            const next = Array.isArray(res.data) ? null : res.data.nextCursor ?? null
+
+            setUserPosts(prev => {
+                if (initial) return items
+                const seen = new Set(prev.map(p => p._id))
+                const merged = [...prev]
+                for (const it of items) if (!seen.has(it._id)) merged.push(it)
+                return merged
+            })
+            setCursor(next)
+            setHasMore(Boolean(next))
+        } catch (err) {
+            console.error('Failed to load user posts', err)
+        } finally {
+            setLoadingMore(false)
+            inFlightRef.current = false
+        }
+    }
 
     const refreshUserAndPosts = async () => {
-        const token = localStorage.getItem('token')
         const userRes = await axios.get('http://localhost:5000/users/profile', {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: authHeaders
         })
         setUser(userRes.data)
-
-        const postsRes = await axios.get(`http://localhost:5000/posts/user/${userRes.data._id}`)
-        setUserPosts(postsRes.data)
+        setCursor(null)
+        setHasMore(true)
+        await loadUserPosts(userRes.data._id, true)
     }
 
     useEffect(() => {
@@ -128,43 +166,69 @@ const MyProfile = () => {
                             </button>
                         </div>
                     ) : (
-                        <div className='posts-grid'>
-                            {userPosts.map(post => (
-                                <div
-                                    key={post._id}
-                                    className='post-thumbnail'
-                                    onClick={() => handleTileClick(post)}
-                                    style={{ cursor: 'pointer' }}
-                                >
-                                    {post.media && post.media.length > 0 ? (
-                                        post.media[0].kind === 'video' ? (
-                                            <video
-                                                src={post.media[0].src}
-                                                className='post-media'
-                                                muted
-                                            />
-                                        ) : (
+                        <>
+                            <div className='posts-grid'>
+                                {userPosts.map(post => (
+                                    <div
+                                        key={post._id}
+                                        className='post-thumbnail'
+                                        onClick={() => handleTileClick(post)}
+                                        style={{ cursor: 'pointer' }}
+                                    >
+                                        {post.media && post.media.length > 0 ? (
+                                            post.media[0].kind === 'video' ? (
+                                                <video
+                                                    src={post.media[0].src}
+                                                    className='post-media'
+                                                    muted
+                                                />
+                                            ) : (
+                                                <img
+                                                    src={post.media[0].src}
+                                                    alt='Post'
+                                                    className='post-media'
+                                                />
+                                            )
+                                        ) : post.image ? (
                                             <img
-                                                src={post.media[0].src}
+                                                src={post.image}
                                                 alt='Post'
                                                 className='post-media'
                                             />
-                                        )
-                                    ) : post.image ? (
-                                        <img
-                                            src={post.image}
-                                            alt='Post'
-                                            className='post-media'
-                                        />
-                                    ) : (
-                                        <div className='no-media'>No media</div>
-                                    )}
-                                    <div className='post-overlay'>
-                                        <span>{post.caption || 'No caption'}</span>
+                                        ) : (
+                                            <div className='no-media'>No media</div>
+                                        )}
+                                        <div className='post-overlay'>
+                                            <span>{post.caption || 'No caption'}</span>
+                                        </div>
                                     </div>
+                                ))}
+                            </div>
+
+                            {hasMore && (
+                                <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
+                                    <button
+                                        onClick={() => loadUserPosts(user._id)}
+                                        disabled={loadingMore}
+                                        className='load-more-btn'
+                                        style={{
+                                            padding: '8px 14px',
+                                            borderRadius: 6,
+                                            border: '1px solid #ddd',
+                                            background: '#fff',
+                                            cursor: loadingMore ? 'default' : 'pointer'
+                                        }}
+                                    >
+                                        {loadingMore ? 'Loading…' : 'Load more'}
+                                    </button>
                                 </div>
-                            ))}
-                        </div>
+                            )}
+                            {!hasMore && userPosts.length > 0 && (
+                                <div style={{ textAlign: 'center', color: '#777', marginTop: 16 }}>
+                                    You’re all caught up
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
 
@@ -273,6 +337,7 @@ const MyProfile = () => {
                 token={token}
                 onClose={() => setEditingPost(null)}
                 onSaved={updated => handleSaved(updated)}
+                refreshUserAndPosts={refreshUserAndPosts}
             />
         </div>
     )

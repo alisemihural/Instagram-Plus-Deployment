@@ -16,16 +16,20 @@ const UserProfile = () => {
         const fetchData = async () => {
             try {
                 const token = localStorage.getItem('token')
-                
+
                 const currentUserRes = await axios.get('http://localhost:5000/users/profile', {
                     headers: { Authorization: `Bearer ${token}` }
                 })
                 setCurrentUser(currentUserRes.data)
 
-                const userRes = await axios.get(`http://localhost:5000/users/${userId}`)
+                const userRes = await axios.get(`http://localhost:5000/users/${userId}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                })
                 setUser(userRes.data)
 
-                const postsRes = await axios.get(`http://localhost:5000/posts/user/${userId}`)
+                const postsRes = await axios.get(`http://localhost:5000/posts/user/${userId}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                })
                 setUserPosts(postsRes.data)
 
             } catch (err) {
@@ -44,7 +48,7 @@ const UserProfile = () => {
 
     const handleFollowToggle = async () => {
         if (!user || isFollowLoading) return
-        
+
         setIsFollowLoading(true)
         try {
             const token = localStorage.getItem('token')
@@ -68,7 +72,7 @@ const UserProfile = () => {
         }
     }
 
-    const isFollowing = currentUser && user && currentUser.following?.some(followedUser => 
+    const isFollowing = currentUser && user && currentUser.following?.some(followedUser =>
         followedUser._id === user._id || followedUser === user._id
     )
 
@@ -154,22 +158,22 @@ const UserProfile = () => {
                                 <div key={post._id} className="post-thumbnail">
                                     {post.media && post.media.length > 0 ? (
                                         post.media[0].kind === 'video' ? (
-                                            <video 
-                                                src={post.media[0].src} 
+                                            <video
+                                                src={post.media[0].src}
                                                 className="post-media"
                                                 muted
                                             />
                                         ) : (
-                                            <img 
-                                                src={post.media[0].src} 
-                                                alt="Post" 
+                                            <img
+                                                src={post.media[0].src}
+                                                alt="Post"
                                                 className="post-media"
                                             />
                                         )
                                     ) : post.image ? (
-                                        <img 
-                                            src={post.image} 
-                                            alt="Post" 
+                                        <img
+                                            src={post.image}
+                                            alt="Post"
                                             className="post-media"
                                         />
                                     ) : (

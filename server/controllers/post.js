@@ -1,4 +1,3 @@
-// create/update/delete posts without base64, delete Cloudinary on removal
 import mongoose from 'mongoose'
 import Post from '../models/Post.js'
 import cloudinary from '../cloudinary.js'
@@ -127,10 +126,68 @@ export const deletePost = async (req, res) => {
 export const getUserPosts = async (req, res) => {
     try {
         const { userId } = req.params
-        const posts = await Post.find({ author: userId }).populate('author', 'username profilePic').sort({ createdAt: -1 })
-        res.status(200).json(posts)
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ message: 'invalid user id' })
+        }
+
+        // cursor-paginated, stable sort
+        const rawLimit = Number(req.query.limit) || 10
+        const limit = Math.min(Math.max(rawLimit, 1), 30)
+        const cursor = req.query.cursor || null
+
+        const match = { author: new mongoose.Types.ObjectId(userId) }
+
+        // support cursor in the form "<ISO>|<_id>" or just "<ISO>"
+        if (cursor) {
+            let createdAt, id
+            if (cursor.includes('|')) {
+                const [iso, hex] = cursor.split('|')
+                const d = new Date(iso)
+                if (!isNaN(d)) createdAt = d
+                if (mongoose.Types.ObjectId.isValid(hex)) id = new mongoose.Types.ObjectId(hex)
+            } else {
+                const d = new Date(cursor)
+                if (!isNaN(d)) createdAt = d
+            }
+
+            if (createdAt) {
+                match.$or = [
+                    { createdAt: { $lt: createdAt } },
+                    { createdAt, _id: { $lt: id || new mongoose.Types.ObjectId('ffffffffffffffffffffffff') } }
+                ]
+            }
+        }
+
+        const items = await Post.aggregate([
+            { $match: match },
+            { $sort: { createdAt: -1, _id: -1 } },    // uses author_1_createdAt_-1 index for the scan
+            { $limit: limit },
+            { $lookup: { from: 'users', localField: 'author', foreignField: '_id', as: 'author' } },
+            { $unwind: '$author' },
+            {
+                $project: {
+                    _id: 1,
+                    caption: 1,
+                    media: { kind: 1, src: 1, publicId: 1 },
+                    createdAt: 1,
+                    updatedAt: 1,
+                    likesCount: { $size: { $ifNull: ['$likes', []] } },
+                    commentsCount: { $size: { $ifNull: ['$comments', []] } },
+                    author: { _id: '$author._id', username: '$author.username', profilePic: '$author.profilePic' }
+                }
+            }
+        ])
+
+        let nextCursor = null
+        if (items.length === limit) {
+            const last = items[items.length - 1]
+            nextCursor = `${last.createdAt.toISOString()}|${last._id}`
+        }
+
+        res.json({ items, nextCursor })
     } catch (err) {
-        res.status(500).json({ message: err.message })
+        console.error('getUserPosts', err)
+        res.status(500).json({ message: err.message || 'server error' })
     }
 }
 
