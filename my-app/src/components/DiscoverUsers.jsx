@@ -15,7 +15,7 @@ const DiscoverUsers = () => {
             try {
                 const token = localStorage.getItem('token')
                 if (token) {
-                    const res = await axios.get(API_ENDPOINTS.USER_PROFILE, {
+                    const res = await axios.get(API_ENDPOINTS.profile, {
                         headers: { Authorization: `Bearer ${token}` }
                     })
                     setCurrentUser(res.data)
@@ -27,10 +27,13 @@ const DiscoverUsers = () => {
 
         const fetchUsers = async () => {
             try {
-                const res = await axios.get(API_ENDPOINTS.USERS)
-                setUsers(res.data)
+                const res = await axios.get(API_ENDPOINTS.users)
+                const userData = res.data
+                // Ensure we always set an array
+                setUsers(Array.isArray(userData) ? userData : [])
             } catch (err) {
                 console.error('Failed to fetch users:', err)
+                setUsers([]) // Set empty array on error
             }
         }
 
@@ -48,8 +51,10 @@ const DiscoverUsers = () => {
 
             setIsSearching(true)
             try {
-                const res = await axios.get(`${API_ENDPOINTS.USERS}/search/${encodeURIComponent(searchQuery)}`)
-                setSearchResults(res.data)
+                const res = await axios.get(API_ENDPOINTS.searchUsers(searchQuery))
+                const searchData = res.data
+                // Ensure we always set an array
+                setSearchResults(Array.isArray(searchData) ? searchData : [])
             } catch (err) {
                 console.error('Failed to search users:', err)
                 setSearchResults([])
@@ -65,24 +70,26 @@ const DiscoverUsers = () => {
     const handleFollowToggle = async (userId) => {
         try {
             const token = localStorage.getItem('token')
-            await axios.patch(`${API_ENDPOINTS.USERS}/${userId}/follow`, {}, {
+            await axios.patch(API_ENDPOINTS.follow(userId), {}, {
                 headers: { Authorization: `Bearer ${token}` }
             })
 
             // Refresh current user data
-            const userRes = await axios.get(API_ENDPOINTS.USER_PROFILE, {
+            const userRes = await axios.get(API_ENDPOINTS.profile, {
                 headers: { Authorization: `Bearer ${token}` }
             })
             setCurrentUser(userRes.data)
 
             // Update the users list
-            const usersRes = await axios.get(API_ENDPOINTS.USERS)
-            setUsers(usersRes.data)
+            const usersRes = await axios.get(API_ENDPOINTS.users)
+            const userData = usersRes.data
+            setUsers(Array.isArray(userData) ? userData : [])
 
             // Update search results if searching
             if (searchQuery.trim() !== '') {
-                const searchRes = await axios.get(`${API_ENDPOINTS.USERS}/search/${encodeURIComponent(searchQuery)}`)
-                setSearchResults(searchRes.data)
+                const searchRes = await axios.get(API_ENDPOINTS.searchUsers(searchQuery))
+                const searchData = searchRes.data
+                setSearchResults(Array.isArray(searchData) ? searchData : [])
             }
         } catch (err) {
             console.error('Failed to toggle follow:', err)
@@ -128,9 +135,11 @@ const DiscoverUsers = () => {
         )
     }
 
-    const displayUsers = searchQuery.trim() !== '' ? searchResults : users.filter(user => 
-        currentUser ? user._id !== currentUser._id : true
-    )
+    const displayUsers = searchQuery.trim() !== '' 
+        ? (Array.isArray(searchResults) ? searchResults : [])
+        : (Array.isArray(users) ? users.filter(user => 
+            currentUser ? user._id !== currentUser._id : true
+        ) : [])
 
     return (
         <div className="discover-users">
