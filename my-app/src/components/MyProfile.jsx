@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import { API_ENDPOINTS } from '../config/api'
 import './UserProfile.css'
 
 const MyProfile = () => {
@@ -15,13 +16,13 @@ const MyProfile = () => {
                 const token = localStorage.getItem('token')
                 
                 // Fetch current user with populated followers/following
-                const userRes = await axios.get('http://localhost:5001/users/profile', {
+                const userRes = await axios.get(API_ENDPOINTS.profile, {
                     headers: { Authorization: `Bearer ${token}` }
                 })
                 setUser(userRes.data)
 
                 // Fetch user's posts
-                const postsRes = await axios.get(`http://localhost:5001/posts/user/${userRes.data._id}`)
+                const postsRes = await axios.get(API_ENDPOINTS.userPosts(userRes.data._id))
                 setUserPosts(postsRes.data)
 
             } catch (err) {

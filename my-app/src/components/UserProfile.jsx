@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import { API_ENDPOINTS } from '../config/api'
 import './UserProfile.css'
 
 const UserProfile = () => {
@@ -18,17 +19,17 @@ const UserProfile = () => {
                 const token = localStorage.getItem('token')
                 
                 // Fetch current user
-                const currentUserRes = await axios.get('http://localhost:5001/users/profile', {
+                const currentUserRes = await axios.get(API_ENDPOINTS.USER_PROFILE, {
                     headers: { Authorization: `Bearer ${token}` }
                 })
                 setCurrentUser(currentUserRes.data)
 
                 // Fetch target user
-                const userRes = await axios.get(`http://localhost:5001/users/${userId}`)
+                const userRes = await axios.get(`${API_ENDPOINTS.USERS}/${userId}`)
                 setUser(userRes.data)
 
                 // Fetch user's posts
-                const postsRes = await axios.get(`http://localhost:5001/posts/user/${userId}`)
+                const postsRes = await axios.get(`${API_ENDPOINTS.POSTS}/user/${userId}`)
                 setUserPosts(postsRes.data)
 
             } catch (err) {
@@ -51,16 +52,16 @@ const UserProfile = () => {
         setIsFollowLoading(true)
         try {
             const token = localStorage.getItem('token')
-            await axios.patch(`http://localhost:5001/users/${user._id}/follow`, {}, {
+            await axios.patch(`${API_ENDPOINTS.USERS}/${user._id}/follow`, {}, {
                 headers: { Authorization: `Bearer ${token}` }
             })
 
             // Refresh user data
-            const userRes = await axios.get(`http://localhost:5001/users/${userId}`)
+            const userRes = await axios.get(`${API_ENDPOINTS.USERS}/${userId}`)
             setUser(userRes.data)
 
             // Refresh current user data
-            const currentUserRes = await axios.get('http://localhost:5001/users/profile', {
+            const currentUserRes = await axios.get(API_ENDPOINTS.USER_PROFILE, {
                 headers: { Authorization: `Bearer ${token}` }
             })
             setCurrentUser(currentUserRes.data)

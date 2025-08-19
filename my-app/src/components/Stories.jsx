@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { API_ENDPOINTS } from '../config/api';
 
 function Stories() {
     const [story, setStory] = useState('');
@@ -24,7 +25,7 @@ function Stories() {
         if (story) {
             try {
                 const token = localStorage.getItem('token');
-                await axios.post('http://localhost:5001/stories', {
+                await axios.post(API_ENDPOINTS.STORIES, {
                     story
                 }, {
                     headers: {

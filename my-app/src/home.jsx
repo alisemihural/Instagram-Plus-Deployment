@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import { LeftAdBanner, RightAdBanner } from './components/AdBanner'
+import { API_ENDPOINTS } from './config/api'
 import './home.css'
 
 const PostCarousel = ({ items, legacyImage, author, createdAt, caption, currentUser, onFollowToggle }) => {
@@ -43,7 +45,7 @@ const PostCarousel = ({ items, legacyImage, author, createdAt, caption, currentU
         setIsLoading(true)
         try {
             const token = localStorage.getItem('token')
-            await axios.patch(`http://localhost:5001/users/${author._id}/follow`, {}, {
+            await axios.patch(API_ENDPOINTS.follow(author._id), {}, {
                 headers: { Authorization: `Bearer ${token}` }
             })
             
@@ -251,7 +253,7 @@ const PostInteractions = ({ post, token }) => {
 
     const fetchComments = async () => {
         try {
-            const res = await axios.get(`http://localhost:5001/posts/${post._id}/comments`, {
+            const res = await axios.get(API_ENDPOINTS.postComments(post._id), {
                 headers: { Authorization: `Bearer ${token}` }
             })
             setComments(res.data)
@@ -262,7 +264,7 @@ const PostInteractions = ({ post, token }) => {
 
     const handleLike = async () => {
         try {
-            const res = await axios.patch(`http://localhost:5001/posts/${post._id}/like`, {}, {
+            const res = await axios.patch(API_ENDPOINTS.likePost(post._id), {}, {
                 headers: { Authorization: `Bearer ${token}` }
             })
             setLikesCount(res.data.likes.length)
@@ -275,7 +277,7 @@ const PostInteractions = ({ post, token }) => {
     const handleAddComment = async () => {
         if (!commentText.trim()) return
         try {
-            const res = await axios.post(`http://localhost:5001/posts/${post._id}/comments`, { text: commentText }, {
+            const res = await axios.post(API_ENDPOINTS.postComments(post._id), { text: commentText }, {
                 headers: { Authorization: `Bearer ${token}` }
             })
             setComments(prev => [...prev, res.data])
@@ -352,7 +354,7 @@ const Home = () => {
             try {
                 const token = localStorage.getItem('token')
                 if (token) {
-                    const res = await axios.get('http://localhost:5001/users/profile', {
+                    const res = await axios.get(API_ENDPOINTS.profile, {
                         headers: { Authorization: `Bearer ${token}` }
                     })
                     setCurrentUser(res.data)
@@ -368,7 +370,7 @@ const Home = () => {
     useEffect(() => {
         const fetchFeed = async () => {
             try {
-                const res = await axios.get('http://localhost:5001/posts')
+                const res = await axios.get(API_ENDPOINTS.posts)
                 setPosts(res.data)
             } catch (err) {
                 console.error('Failed to fetch feed:', err)
@@ -382,7 +384,7 @@ const Home = () => {
         try {
             const token = localStorage.getItem('token')
             if (token) {
-                const res = await axios.get('http://localhost:5001/users/profile', {
+                const res = await axios.get(API_ENDPOINTS.profile, {
                     headers: { Authorization: `Bearer ${token}` }
                 })
                 setCurrentUser(res.data)
@@ -395,7 +397,7 @@ const Home = () => {
     useEffect(() => {
         const fetchFeed = async () => {
             try {
-                const res = await axios.get('http://localhost:5001/stories')
+                const res = await axios.get(API_ENDPOINTS.stories)
                 setStories(res.data)
             } catch (err) {
                 console.error('Failed to fetch stories:', err)
@@ -407,32 +409,45 @@ const Home = () => {
 
 
     return (
-        <div className="feed-container">
-            {stories.length === 0 ? (<p>No stories yet</p>) : (
-                stories.map(eachStory => (
-                    <div className='story' key={eachStory._id}>
-                        <img src={eachStory.story} alt="Story" className="story-image" />
-                    </div>
-                ))
-            )}
-            {posts.length === 0 ? (
-                <p>No posts yet</p>
-            ) : (
-                posts.map(post => (
-                    <div key={post._id} style={{ marginBottom: '36px' }}>
-                        <PostCarousel
-                            items={post.media}
-                            legacyImage={post.image}
-                            author={post.author}
-                            createdAt={post.createdAt}
-                            caption={post.caption}
-                            currentUser={currentUser}
-                            onFollowToggle={handleFollowToggle}
-                        />
-                        <PostInteractions post={{ ...post, currentUserId: userId }} token={token} />
-                    </div>
-                ))
-            )}
+        <div className="home-layout">
+            {/* Left Ad Panel */}
+            <div className="left-sidebar">
+                <LeftAdBanner />
+            </div>
+
+            {/* Main Feed */}
+            <div className="feed-container">
+                {stories.length === 0 ? (<p>No stories yet</p>) : (
+                    stories.map(eachStory => (
+                        <div className='story' key={eachStory._id}>
+                            <img src={eachStory.story} alt="Story" className="story-image" />
+                        </div>
+                    ))
+                )}
+                {posts.length === 0 ? (
+                    <p>No posts yet</p>
+                ) : (
+                    posts.map(post => (
+                        <div key={post._id} style={{ marginBottom: '36px' }}>
+                            <PostCarousel
+                                items={post.media}
+                                legacyImage={post.image}
+                                author={post.author}
+                                createdAt={post.createdAt}
+                                caption={post.caption}
+                                currentUser={currentUser}
+                                onFollowToggle={handleFollowToggle}
+                            />
+                            <PostInteractions post={{ ...post, currentUserId: userId }} token={token} />
+                        </div>
+                    ))
+                )}
+            </div>
+
+            {/* Right Ad Panel */}
+            <div className="right-sidebar">
+                <RightAdBanner />
+            </div>
         </div>
     )
 }

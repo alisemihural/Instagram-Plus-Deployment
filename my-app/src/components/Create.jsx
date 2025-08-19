@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import { API_ENDPOINTS } from '../config/api'
 
 const MAX_MEDIA = 5
 
@@ -70,7 +71,7 @@ const CreatePost = () => {
         const token = localStorage.getItem('token')
         const formData = new FormData()
         formData.append('file', file)
-        const up = await axios.post('http://localhost:5001/upload/video', formData, {
+        const up = await axios.post(API_ENDPOINTS.UPLOAD_VIDEO, formData, {
             headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
         })
         return up.data.url
@@ -208,7 +209,7 @@ const CreatePost = () => {
         try {
             const token = localStorage.getItem('token')
             await axios.post(
-                'http://localhost:5001/posts',
+                API_ENDPOINTS.POSTS,
                 { caption, media },
                 { headers: { Authorization: `Bearer ${token}` } }
             )
