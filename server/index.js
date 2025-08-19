@@ -13,19 +13,18 @@ import storyRoutes from './routes/stories.js'
 const app = express()
 dotenv.config()
 
-// Configure CORS first, before body parsers
+// Simple and clean CORS configuration
 app.use(cors({
-    origin: true, // Allow all origins for now
+    origin: 'https://instaplus.up.railway.app',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token', 'Origin', 'X-Requested-With', 'Accept'],
-    optionsSuccessStatus: 200 // For legacy browser support
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token', 'Origin', 'X-Requested-With', 'Accept']
 }))
 
 app.use(bodyParser.json({ limit: '30mb', extended: true }))
 app.use(bodyParser.urlencoded({ limit: '30mb', extended: true }))
 
-// Debug middleware to log all requests
+// Simple debug middleware
 app.use((req, res, next) => {
     console.log(`${req.method} ${req.path} - Origin: ${req.get('Origin')}`);
     next();
@@ -33,7 +32,7 @@ app.use((req, res, next) => {
 
 // Test route
 app.get('/test', (req, res) => {
-    res.json({ message: 'CORS is working!' })
+    res.json({ message: 'Server is working!' })
 })
 
 app.use('/auth', authRoutes)
@@ -42,7 +41,30 @@ app.use('/users', userRoutes)
 app.use('/upload', uploadRoutes)
 app.use('/stories', storyRoutes)
 
-const PORT = process.env.PORT || 5001
+// Serve static files from the React app build directory
+app.use(express.static('client'))
+
+// Catch all handler: send back React's index.html file for any non-API routes
+// Use a safer approach without wildcards
+app.use((req, res, next) => {
+    // Only serve index.html for GET requests that don't start with /api, /auth, etc.
+    if (req.method === 'GET' && 
+        !req.path.startsWith('/auth') && 
+        !req.path.startsWith('/posts') && 
+        !req.path.startsWith('/users') && 
+        !req.path.startsWith('/upload') && 
+        !req.path.startsWith('/stories') && 
+        !req.path.startsWith('/test') &&
+        !req.path.includes('.')) { // Skip files with extensions (CSS, JS, images)
+        
+        return res.sendFile('index.html', { root: 'client' })
+    }
+    
+    // If it's an API route that doesn't exist, return 404
+    next()
+})
+
+const PORT = process.env.PORT || 5000
 
 mongoose.connect(process.env.CONNECTION_URL)
     .then(() => app.listen(PORT, () => console.log(`Server Running on port: ${PORT} | ${process.env.CONNECTION_URL}`)))

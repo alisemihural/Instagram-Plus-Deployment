@@ -4,6 +4,7 @@ import axios from 'axios'
 import { LeftAdBanner, RightAdBanner } from './components/AdBanner'
 import { API_ENDPOINTS } from './config/api'
 import './home.css'
+import AdBanner from './components/AdBanner'
 
 const PostCarousel = ({ items, legacyImage, author, createdAt, caption, currentUser, onFollowToggle }) => {
     const [index, setIndex] = useState(0)
@@ -414,7 +415,6 @@ const Home = () => {
             <div className="left-sidebar">
                 <LeftAdBanner />
             </div>
-
             {/* Main Feed */}
             <div className="feed-container">
                 {stories.length === 0 ? (<p>No stories yet</p>) : (
@@ -443,7 +443,6 @@ const Home = () => {
                     ))
                 )}
             </div>
-
             {/* Right Ad Panel */}
             <div className="right-sidebar">
                 <RightAdBanner />

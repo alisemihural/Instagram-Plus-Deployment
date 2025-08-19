@@ -71,7 +71,9 @@ const CreatePost = () => {
         const token = localStorage.getItem('token')
         const formData = new FormData()
         formData.append('file', file)
+
         const up = await axios.post(API_ENDPOINTS.UPLOAD_VIDEO, formData, {
+
             headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
         })
         return up.data.url
