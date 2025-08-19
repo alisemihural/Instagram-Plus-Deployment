@@ -1,0 +1,30 @@
+.ad-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.left-ad {
+    margin-right: 20px;
+}
+
+.right-ad {
+    margin-left: 20px;
+}
+
+/* Responsive design */
+@media (max-width: 1200px) {
+    .left-ad,
+    .right-ad {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .ad-container {
+        margin: 10px 0;
+        padding: 8px;
+    }
+}
