@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import { LeftAdBanner, RightAdBanner } from './components/AdBanner'
+import { API_ENDPOINTS } from './config/api'
 import './home.css'
 import AdBanner from './components/AdBanner'
 
@@ -44,7 +46,7 @@ const PostCarousel = ({ items, legacyImage, author, createdAt, caption, currentU
         setIsLoading(true)
         try {
             const token = localStorage.getItem('token')
-            await axios.patch(`https://instaplus.up.railway.app/users/${author._id}/follow`, {}, {
+            await axios.patch(API_ENDPOINTS.follow(author._id), {}, {
                 headers: { Authorization: `Bearer ${token}` }
             })
             
@@ -252,7 +254,7 @@ const PostInteractions = ({ post, token }) => {
 
     const fetchComments = async () => {
         try {
-            const res = await axios.get(`https://instaplus.up.railway.app/posts/${post._id}/comments`, {
+            const res = await axios.get(API_ENDPOINTS.postComments(post._id), {
                 headers: { Authorization: `Bearer ${token}` }
             })
             setComments(res.data)
@@ -263,7 +265,7 @@ const PostInteractions = ({ post, token }) => {
 
     const handleLike = async () => {
         try {
-            const res = await axios.patch(`https://instaplus.up.railway.app/posts/${post._id}/like`, {}, {
+            const res = await axios.patch(API_ENDPOINTS.likePost(post._id), {}, {
                 headers: { Authorization: `Bearer ${token}` }
             })
             setLikesCount(res.data.likes.length)
@@ -276,7 +278,7 @@ const PostInteractions = ({ post, token }) => {
     const handleAddComment = async () => {
         if (!commentText.trim()) return
         try {
-            const res = await axios.post(`https://instaplus.up.railway.app/posts/${post._id}/comments`, { text: commentText }, {
+            const res = await axios.post(API_ENDPOINTS.postComments(post._id), { text: commentText }, {
                 headers: { Authorization: `Bearer ${token}` }
             })
             setComments(prev => [...prev, res.data])
@@ -353,7 +355,7 @@ const Home = () => {
             try {
                 const token = localStorage.getItem('token')
                 if (token) {
-                    const res = await axios.get('https://instaplus.up.railway.app/users/profile', {
+                    const res = await axios.get(API_ENDPOINTS.profile, {
                         headers: { Authorization: `Bearer ${token}` }
                     })
                     setCurrentUser(res.data)
@@ -369,7 +371,7 @@ const Home = () => {
     useEffect(() => {
         const fetchFeed = async () => {
             try {
-                const res = await axios.get('https://instaplus.up.railway.app/posts')
+                const res = await axios.get(API_ENDPOINTS.posts)
                 setPosts(res.data)
             } catch (err) {
                 console.error('Failed to fetch feed:', err)
@@ -383,7 +385,7 @@ const Home = () => {
         try {
             const token = localStorage.getItem('token')
             if (token) {
-                const res = await axios.get(`https://instaplus.up.railway.app/users/profile`, {
+                const res = await axios.get(API_ENDPOINTS.profile, {
                     headers: { Authorization: `Bearer ${token}` }
                 })
                 setCurrentUser(res.data)
@@ -396,7 +398,7 @@ const Home = () => {
     useEffect(() => {
         const fetchFeed = async () => {
             try {
-                const res = await axios.get('https://instaplus.up.railway.app/stories')
+                const res = await axios.get(API_ENDPOINTS.stories)
                 setStories(res.data)
             } catch (err) {
                 console.error('Failed to fetch stories:', err)
@@ -408,10 +410,12 @@ const Home = () => {
 
 
     return (
-        <div className="home-container">
-            <div className="ad-banner-left">
-                <AdBanner />
+        <div className="home-layout">
+            {/* Left Ad Panel */}
+            <div className="left-sidebar">
+                <LeftAdBanner />
             </div>
+            {/* Main Feed */}
             <div className="feed-container">
                 {stories.length === 0 ? (<p>No stories yet</p>) : (
                     stories.map(eachStory => (
@@ -439,8 +443,9 @@ const Home = () => {
                     ))
                 )}
             </div>
-            <div className="ad-banner-right">
-                <AdBanner />
+            {/* Right Ad Panel */}
+            <div className="right-sidebar">
+                <RightAdBanner />
             </div>
         </div>
     )

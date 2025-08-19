@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import { API_ENDPOINTS } from '../config/api'
 import './Login.css'
 
 const Login = ({ setIsLoggedIn }) => {
@@ -12,7 +13,7 @@ const Login = ({ setIsLoggedIn }) => {
         e.preventDefault()
 
         try {
-            const res = await axios.post(`https://instaplus.up.railway.app/auth/login`, {
+            const res = await axios.post(API_ENDPOINTS.login, {
                 email,
                 password
             })

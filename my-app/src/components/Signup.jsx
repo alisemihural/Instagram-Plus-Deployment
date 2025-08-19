@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import { API_ENDPOINTS } from '../config/api'
 import './Signup.css'
 
 const Signup = () => {
@@ -23,7 +24,7 @@ const Signup = () => {
         console.log('email', email)
 
         try {
-            const res = await axios.post('https://instaplus.up.railway.app/auth/register', {
+            const res = await axios.post(API_ENDPOINTS.register, {
                 username,
                 email,
                 password
