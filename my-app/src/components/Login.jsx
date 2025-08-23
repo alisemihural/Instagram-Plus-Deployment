@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import './Login.css'
+import { setToken } from '../auth/simpleAuth'
 
 const Login = ({ setIsLoggedIn }) => {
     const [email, setEmail] = useState('')
@@ -19,6 +20,7 @@ const Login = ({ setIsLoggedIn }) => {
 
             localStorage.setItem('token', res.data.token)
             setIsLoggedIn(true)
+            setToken(res.data.token)
             navigate('/Home')
         } catch (err) {
             alert(err.response?.data?.message || 'Login failed')

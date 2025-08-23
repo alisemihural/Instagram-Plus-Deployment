@@ -13,7 +13,6 @@ const MyProfile = () => {
     const [isLoading, setIsLoading] = useState(true)
     const [editingPost, setEditingPost] = useState(null)
 
-    // pagination for user's posts
     const [cursor, setCursor] = useState(null)
     const [hasMore, setHasMore] = useState(true)
     const [loadingMore, setLoadingMore] = useState(false)
