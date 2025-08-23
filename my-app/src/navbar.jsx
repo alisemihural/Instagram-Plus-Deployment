@@ -1,8 +1,17 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useState } from 'react'
 import './navbar.css'
+import { AiOutlineHome } from 'react-icons/ai'
+import { FiSearch, FiLogOut } from 'react-icons/fi'
+import { BiMessageSquareDetail, BiPlusCircle } from 'react-icons/bi'
+import { FaRegUserCircle } from 'react-icons/fa'
+import { MdOutlineAddPhotoAlternate } from 'react-icons/md'
+import { BsCameraReels } from 'react-icons/bs'
 
 const Navbar = ({ isLoggedIn, setIsLoggedIn }) => {
     const navigate = useNavigate()
+    const location = useLocation()
+    const [showCreate, setShowCreate] = useState(false)
 
     const handleLogout = () => {
         localStorage.removeItem('token')
@@ -10,41 +19,71 @@ const Navbar = ({ isLoggedIn, setIsLoggedIn }) => {
         navigate('/login')
     }
 
+    const Item = ({ to, icon: Icon, label }) => {
+        const active = location.pathname === to
+        return (
+            <Link to={to} className={`ig-nav-item ${active ? 'active' : ''}`}>
+                <Icon size={22} />
+                <span className="ig-label">{label}</span>
+            </Link>
+        )
+    }
+
     return (
-        <nav className="navbar" style={{ display: 'flex', flexDirection: 'column', height: '100vh', padding: '0px 0px 0px 10px' }}>
-            <h1>Instagram</h1>
-            <ul style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, listStyle: 'none', padding: 0 }}>
-                <li><Link to="/">Home</Link></li>
+        <nav className="ig-nav">
+            <div className="ig-logo" onClick={() => navigate('/')}>
+                InstagramPlus
+            </div>
+
+            <div className="ig-nav-list">
+                <Item to="/" icon={AiOutlineHome} label="Home" />
 
                 {isLoggedIn && (
                     <>
-                        <li><Link to="/messages">Messages</Link></li>
-                        <li><Link to="/discover">Discover</Link></li>
-                        <li><Link to="/create">Create</Link></li>
-                        <li><Link to="/create_story">Create Story</Link></li>
+                        <Item to="/discover" icon={FiSearch} label="Search" />
+                        <Item to="/messages" icon={BiMessageSquareDetail} label="Messages" />
+
+                        <div
+                            className="ig-create-wrap"
+                            onMouseEnter={() => setShowCreate(true)}
+                            onMouseLeave={() => setShowCreate(false)}
+                        >
+                            <button className="ig-nav-item ig-button">
+                                <BiPlusCircle size={22} />
+                                <span className="ig-label">Create</span>
+                            </button>
+
+                            {showCreate && (
+                                <div className="ig-create-popover">
+                                    <Link to="/create" className="ig-create-item">
+                                        <MdOutlineAddPhotoAlternate size={18} />
+                                        <span>New Post</span>
+                                    </Link>
+                                    <Link to="/create_story" className="ig-create-item">
+                                        <BsCameraReels size={18} />
+                                        <span>New Story</span>
+                                    </Link>
+                                </div>
+                            )}
+                        </div>
                     </>
                 )}
 
                 {!isLoggedIn && (
                     <>
-                        <li><Link to="/login">Login</Link></li>
-                        <li><Link to="/signup">Signup</Link></li>
+                        <Item to="/login" icon={FaRegUserCircle} label="Login" />
+                        <Item to="/signup" icon={FaRegUserCircle} label="Signup" />
                     </>
                 )}
-            </ul>
+            </div>
 
             {isLoggedIn && (
-                <div style={{ marginTop: 'auto', marginBottom: '20px', display: 'flex', flexDirection: 'column' }}>
-                    <Link to="/my-profile" style={{ fontWeight: 'bold', padding: '0px 0px 10px 10px' }}>
-                        My Profile
-                    </Link>
-                    <Link
-                        onClick={handleLogout}
-                        className="logout-button"
-                        style={{ fontWeight: 'bold', padding: '0px 0px 10px 10px' }}
-                    >
-                        Logout
-                    </Link>
+                <div className="ig-bottom">
+                    <Item to="/my-profile" icon={FaRegUserCircle} label="Profile" />
+                    <button className="ig-nav-item ig-button" onClick={handleLogout}>
+                        <FiLogOut size={22} />
+                        <span className="ig-label">Logout</span>
+                    </button>
                 </div>
             )}
         </nav>
