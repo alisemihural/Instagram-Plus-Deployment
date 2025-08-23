@@ -90,7 +90,7 @@ const MediaCarousel = ({ media = [], index, setIndex, height = 480, dark = true,
                         style={{
                             position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
                             background: 'rgba(0,0,0,0.45)', border: 'none', color: '#fff',
-                            padding: 8, borderRadius: '50%', cursor: index === 0 ? 'not-allowed' : 'pointer'
+                            padding: 8, borderRadius: '50%', display: index === 0 ? 'none' : 'block'
                         }}
                     >
                         <BsChevronLeft size={20} />
@@ -103,7 +103,7 @@ const MediaCarousel = ({ media = [], index, setIndex, height = 480, dark = true,
                         style={{
                             position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
                             background: 'rgba(0,0,0,0.45)', border: 'none', color: '#fff',
-                            padding: 8, borderRadius: '50%', cursor: index === media.length - 1 ? 'not-allowed' : 'pointer'
+                            padding: 8, borderRadius: '50%', display: index === media.length - 1 ? 'none' : 'block'
                         }}
                     >
                         <BsChevronRight size={20} />

@@ -1,6 +1,7 @@
 import mongoose from 'mongoose'
 import Post from '../models/Post.js'
 import cloudinary from '../cloudinary.js'
+import User from '../models/User.js'
 
 const safeDestroy = async publicId => {
     try {
@@ -17,16 +18,31 @@ const safeDestroy = async publicId => {
 
 export const getFeed = async (req, res) => {
     try {
-        const viewerId = new mongoose.Types.ObjectId(req.userId)
-        const limit = Math.min(parseInt(req.query.limit || '10', 10), 25)
-        const cursor = req.query.cursor ? new Date(req.query.cursor) : null
+        const viewerId = new mongoose.Types.ObjectId(req.userId);
 
-        const pipeline = cursor
-            ? [{ $match: { createdAt: { $lt: cursor } } }, { $sort: { createdAt: -1, _id: -1 } }, { $limit: limit }]
-            : [{ $sort: { createdAt: -1, _id: -1 } }, { $limit: limit }]
+        const me = await User.findById(viewerId).select('following').lean();
+        if (!me) return res.status(401).json({ message: 'unauthorized' });
 
-        pipeline.push(
-            { $lookup: { from: 'users', localField: 'author', foreignField: '_id', as: 'author' } },
+        const authorIds = [viewerId, ...(me.following || [])].map(id => new mongoose.Types.ObjectId(id));
+
+        const limit = Math.min(parseInt(req.query.limit || '10', 10), 25);
+        const cursor = req.query.cursor ? new Date(req.query.cursor) : null;
+
+        const match = { author: { $in: authorIds } };
+        if (cursor) match.createdAt = { $lt: cursor };
+
+        const pipeline = [
+            { $match: match },
+            { $sort: { createdAt: -1, _id: -1 } },
+            { $limit: limit },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'author',
+                    foreignField: '_id',
+                    as: 'author'
+                }
+            },
             { $unwind: '$author' },
             {
                 $project: {
@@ -35,27 +51,42 @@ export const getFeed = async (req, res) => {
                         $map: {
                             input: '$media',
                             as: 'm',
-                            in: { kind: '$$m.kind', src: '$$m.src', publicId: '$$m.publicId', width: '$$m.width', height: '$$m.height', duration: '$$m.duration' }
+                            in: {
+                                kind: '$$m.kind',
+                                src: '$$m.src',
+                                publicId: '$$m.publicId',
+                                width: '$$m.width',
+                                height: '$$m.height',
+                                duration: '$$m.duration'
+                            }
                         }
                     },
                     createdAt: 1,
                     updatedAt: 1,
-                    author: { _id: '$author._id', username: '$author.username', profilePic: '$author.profilePic' },
+                    author: {
+                        _id: '$author._id',
+                        username: '$author.username',
+                        profilePic: '$author.profilePic'
+                    },
                     likesCount: { $size: { $ifNull: ['$likes', []] } },
                     commentsCount: { $size: { $ifNull: ['$comments', []] } },
                     isLiked: { $in: [viewerId, { $ifNull: ['$likes', []] }] }
                 }
             }
-        )
+        ];
 
-        const items = await Post.aggregate(pipeline).hint({ createdAt: -1, _id: -1 }).allowDiskUse(true)
-        const nextCursor = items.length === limit ? items[items.length - 1].createdAt : null
-        res.status(200).json({ items, nextCursor })
+        const items = await Post.aggregate(pipeline)
+            .hint({ author: 1, createdAt: -1 })
+            .allowDiskUse(true);
+
+        const nextCursor = items.length === limit ? items[items.length - 1].createdAt : null;
+        res.status(200).json({ items, nextCursor });
     } catch (err) {
-        console.error('getFeed error', err)
-        res.status(500).json({ message: 'server error' })
+        console.error('getFeed error', err);
+        res.status(500).json({ message: 'server error' });
     }
-}
+};
+
 
 export const getPost = async (req, res) => {
     try {
