@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import { API_ENDPOINTS } from '../config/api'
 
 const Spinner = () => (
     <div style={{
@@ -36,7 +37,7 @@ function Stories() {
     const uploadOne = async file => {
         const fd = new FormData()
         fd.append('files', file)
-        const res = await axios.post('http://localhost:5000/upload/media', fd, {
+        const res = await axios.post(API_ENDPOINTS.uploadMedia, fd, {
             headers: { ...headers, 'Content-Type': 'multipart/form-data' }
         })
         const first = (res.data?.media || [])[0]
@@ -46,7 +47,7 @@ function Stories() {
     const deleteByPublicId = async pid => {
         if (!pid) return
         try {
-            await axios.delete('http://localhost:5000/upload/media', {
+            await axios.delete(API_ENDPOINTS.uploadMedia, {
                 headers,
                 data: { publicIds: [pid] }
             })
@@ -123,7 +124,7 @@ function Stories() {
             return
         }
         try {
-            await axios.post('http://localhost:5000/stories', { media }, { headers })
+            await axios.post(API_ENDPOINTS.stories, { media }, { headers })
             setSubmitted(true)
             newUploadPidRef.current = null
             alert('Story created!')
@@ -151,7 +152,7 @@ function Stories() {
             if (submitted) return
             if (newUploadPidRef.current) {
                 navigator.sendBeacon?.(
-                    'http://localhost:5000/upload/media',
+                    API_ENDPOINTS.uploadMedia,
                     new Blob([JSON.stringify({ publicIds: [newUploadPidRef.current] })], { type: 'application/json' })
                 )
             }

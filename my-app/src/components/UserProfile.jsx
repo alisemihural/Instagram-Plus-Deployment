@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import './UserProfile.css'
+import { API_ENDPOINTS } from '../config/api'
 
 const PAGE_SIZE = 12
 
@@ -30,13 +31,13 @@ const UserProfile = () => {
             setCursor(null)
             setHasMore(true)
 
-            const me = await axios.get('http://localhost:5000/users/profile', { headers: authHeaders })
+            const me = await axios.get(API_ENDPOINTS.profile, { headers: authHeaders })
             setCurrentUser(me.data)
 
-            const u = await axios.get(`http://localhost:5000/users/${userId}`, { headers: authHeaders })
+            const u = await axios.get(API_ENDPOINTS.userById(userId), { headers: authHeaders })
             setUser(u.data)
 
-            const pr = await axios.get(`http://localhost:5000/posts/user/${userId}`, {
+            const pr = await axios.get(API_ENDPOINTS.userPosts(userId), {
                 headers: authHeaders,
                 params: { limit: PAGE_SIZE }
             })
@@ -59,7 +60,7 @@ const UserProfile = () => {
         if (!hasMore || loadingMore) return
         try {
             setLoadingMore(true)
-            const pr = await axios.get(`http://localhost:5000/posts/user/${userId}`, {
+            const pr = await axios.get(API_ENDPOINTS.userPosts(userId), {
                 headers: authHeaders,
                 params: { limit: PAGE_SIZE, cursor }
             })
@@ -90,14 +91,14 @@ const UserProfile = () => {
         setIsFollowLoading(true)
         try {
             await axios.patch(
-                `http://localhost:5000/users/${user._id}/follow`,
+                API_ENDPOINTS.follow(user._id),
                 {},
                 { headers: authHeaders }
             )
 
             const [u, me] = await Promise.all([
-                axios.get(`http://localhost:5000/users/${userId}`, { headers: authHeaders }),
-                axios.get('http://localhost:5000/users/profile', { headers: authHeaders })
+                axios.get(API_ENDPOINTS.userById(userId), { headers: authHeaders }),
+                axios.get(API_ENDPOINTS.profile, { headers: authHeaders })
             ])
             setUser(u.data)
             setCurrentUser(me.data)

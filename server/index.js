@@ -44,8 +44,11 @@ app.use('/upload', uploadRoutes)
 app.use('/stories', storyRoutes)
 app.use('/messages', messageRoutes)
 
-const PORT = process.env.PORT || 5000
+const PORT = process.env.PORT || 5001
 
 mongoose.connect(process.env.CONNECTION_URL)
-    .then(() => app.listen(PORT, () => console.log(`Server Running on port: ${PORT} | ${process.env.CONNECTION_URL}`)))
+    .then(() => app.listen(PORT, () => {
+        console.log(`Server running on port: ${PORT}`)
+        console.log(`Database connected: ${process.env.CONNECTION_URL}`)
+    }))
     .catch((error) => console.log(error.message))

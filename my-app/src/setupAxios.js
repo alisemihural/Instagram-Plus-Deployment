@@ -1,7 +1,8 @@
 import axios from 'axios'
 import { getToken, clearToken } from './auth/simpleAuth'
+import { API_BASE_URL } from './config/api'
 
-// axios.defaults.baseURL = 'http://localhost:5000'
+axios.defaults.baseURL = API_BASE_URL
 
 axios.interceptors.request.use(cfg => {
     const t = getToken()

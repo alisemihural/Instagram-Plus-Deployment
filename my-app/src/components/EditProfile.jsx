@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
+import { API_ENDPOINTS } from '../config/api'
 
 const EditProfile = () => {
     const [username, setUsername] = useState('')
@@ -14,7 +15,7 @@ const EditProfile = () => {
         const fetchProfile = async () => {
             try {
                 const token = localStorage.getItem('token')
-                const res = await axios.get('http://localhost:5000/users/profile', {
+                const res = await axios.get(API_ENDPOINTS.profile, {
                     headers: { Authorization: `Bearer ${token}` }
                 })
 
@@ -45,7 +46,7 @@ const EditProfile = () => {
         e.preventDefault()
         try {
             const token = localStorage.getItem('token')
-            await axios.patch('http://localhost:5000/users/editProfile', {
+            await axios.patch(API_ENDPOINTS.editProfile, {
                 username,
                 profilePic
             }, {

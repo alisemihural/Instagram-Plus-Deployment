@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import './Login.css'
 import { setToken } from '../auth/simpleAuth'
+import { API_ENDPOINTS } from '../config/api'
 
 const Login = ({ setIsLoggedIn }) => {
     const [email, setEmail] = useState('')
@@ -13,7 +14,7 @@ const Login = ({ setIsLoggedIn }) => {
         e.preventDefault()
 
         try {
-            const res = await axios.post('http://localhost:5000/auth/login', {
+            const res = await axios.post(API_ENDPOINTS.login, {
                 email,
                 password
             })

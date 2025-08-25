@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import axios from 'axios'
+import { API_ENDPOINTS } from '../config/api'
 
 const Spinner = () => (
     <div style={{
@@ -125,7 +126,7 @@ export default function EditPostModal({ open, post, token, onClose, onSaved, onD
     const uploadFiles = async files => {
         const fd = new FormData()
         files.forEach(f => fd.append('files', f))
-        const res = await axios.post('http://localhost:5000/upload/media', fd, {
+        const res = await axios.post(API_ENDPOINTS.uploadMedia, fd, {
             headers: { ...headers, 'Content-Type': 'multipart/form-data' }
         })
         return res.data?.media || []
@@ -134,7 +135,7 @@ export default function EditPostModal({ open, post, token, onClose, onSaved, onD
     const deleteByPublicIds = async publicIds => {
         if (!publicIds?.length) return
         try {
-            await axios.delete('http://localhost:5000/upload/media', {
+            await axios.delete(API_ENDPOINTS.uploadMedia, {
                 headers,
                 data: { publicIds }
             })
@@ -278,7 +279,7 @@ export default function EditPostModal({ open, post, token, onClose, onSaved, onD
 
         try {
             const payload = { caption, media, removedPublicIds }
-            const res = await axios.patch(`http://localhost:5000/posts/${post._id}`, payload, { headers })
+            const res = await axios.patch(API_ENDPOINTS.editPost(post._id), payload, { headers })
             newUploadsRef.current.clear()
             onSaved && onSaved(res.data)
             refreshUserAndPosts()
@@ -305,7 +306,7 @@ export default function EditPostModal({ open, post, token, onClose, onSaved, onD
             if (toDelete.length) await deleteByPublicIds(toDelete)
             newUploadsRef.current.clear()
 
-            await axios.delete(`http://localhost:5000/posts/${post._id}`, { headers })
+            await axios.delete(API_ENDPOINTS.deletePost(post._id), { headers })
             onDeleted && onDeleted(post._id)
             refreshUserAndPosts()
             onClose && onClose(true)

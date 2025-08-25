@@ -6,6 +6,7 @@ import { BiMessageRounded } from 'react-icons/bi'
 import { FiEdit2, FiTrash2 } from 'react-icons/fi'
 import { BsChevronDown, BsChevronUp } from 'react-icons/bs'
 import MediaCarousel from './MediaCarousel.jsx'
+import { API_ENDPOINTS } from '../config/api'
 
 const CommentsModal = ({ open, onClose, post, token, currentUserId, onStats }) => {
     const media = useMemo(() => (
@@ -50,7 +51,7 @@ const CommentsModal = ({ open, onClose, post, token, currentUserId, onStats }) =
             if (!open || !post?._id) return
             try {
                 setBusy(true)
-                const res = await axios.get(`http://localhost:5000/posts/${post._id}/comments`, {
+                const res = await axios.get(API_ENDPOINTS.postComments(post._id), {
                     headers: { Authorization: `Bearer ${token}` }
                 })
                 setComments(res.data || [])
@@ -84,7 +85,7 @@ const CommentsModal = ({ open, onClose, post, token, currentUserId, onStats }) =
         if (!text) return
         try {
             if (editing) {
-                await axios.patch(`http://localhost:5000/posts/${post._id}/comments/${editing.commentId}`, {
+                await axios.patch(API_ENDPOINTS.commentById(post._id, editing.commentId), {
                     text,
                     replyId: editing.replyId || undefined
                 }, { headers: { Authorization: `Bearer ${token}` } })
@@ -104,7 +105,7 @@ const CommentsModal = ({ open, onClose, post, token, currentUserId, onStats }) =
                 setEditing(null)
             } else {
                 const body = replyTo ? { text, parentId: replyTo.id } : { text }
-                const res = await axios.post(`http://localhost:5000/posts/${post._id}/comments`, body, {
+                const res = await axios.post(API_ENDPOINTS.postComments(post._id), body, {
                     headers: { Authorization: `Bearer ${token}` }
                 })
                 if (res.data.kind === 'reply') {
@@ -130,7 +131,7 @@ const CommentsModal = ({ open, onClose, post, token, currentUserId, onStats }) =
 
     const likeToggle = async (commentId, replyId) => {
         try {
-            await axios.patch(`http://localhost:5000/posts/${post._id}/comments/${commentId}/like`, {
+            await axios.patch(API_ENDPOINTS.likeComment(post._id, commentId), {
                 replyId
             }, { headers: { Authorization: `Bearer ${token}` } })
             setComments(prev => prev.map(c => {
@@ -171,7 +172,7 @@ const CommentsModal = ({ open, onClose, post, token, currentUserId, onStats }) =
 
     const removeItem = async (commentId, replyId) => {
         try {
-            await axios.delete(`http://localhost:5000/posts/${post._id}/comments/${commentId}`, {
+            await axios.delete(API_ENDPOINTS.commentById(post._id, commentId), {
                 headers: { Authorization: `Bearer ${token}` },
                 data: { replyId: replyId || undefined }
             })

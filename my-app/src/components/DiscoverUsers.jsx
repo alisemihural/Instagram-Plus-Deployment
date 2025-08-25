@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 import './DiscoverUsers.css'
+import { API_ENDPOINTS } from '../config/api'
 
 const DiscoverUsers = () => {
     const [users, setUsers] = useState([])
@@ -14,7 +15,7 @@ const DiscoverUsers = () => {
             try {
                 const token = localStorage.getItem('token')
                 if (token) {
-                    const res = await axios.get('http://localhost:5000/users/profile', {
+                    const res = await axios.get(API_ENDPOINTS.profile, {
                         headers: { Authorization: `Bearer ${token}` }
                     })
                     setCurrentUser(res.data)
@@ -26,7 +27,7 @@ const DiscoverUsers = () => {
 
         const fetchUsers = async () => {
             try {
-                const res = await axios.get('http://localhost:5000/users')
+                const res = await axios.get(API_ENDPOINTS.users)
                 setUsers(res.data)
             } catch (err) {
                 console.error('Failed to fetch users:', err)
@@ -47,7 +48,7 @@ const DiscoverUsers = () => {
 
             setIsSearching(true)
             try {
-                const res = await axios.get(`http://localhost:5000/users/search/${encodeURIComponent(searchQuery)}`)
+                const res = await axios.get(API_ENDPOINTS.searchUsers(searchQuery))
                 setSearchResults(res.data)
             } catch (err) {
                 console.error('Failed to search users:', err)
@@ -64,20 +65,20 @@ const DiscoverUsers = () => {
     const handleFollowToggle = async (userId) => {
         try {
             const token = localStorage.getItem('token')
-            await axios.patch(`http://localhost:5000/users/${userId}/follow`, {}, {
+            await axios.patch(API_ENDPOINTS.follow(userId), {}, {
                 headers: { Authorization: `Bearer ${token}` }
             })
 
-            const userRes = await axios.get('http://localhost:5000/users/profile', {
+            const userRes = await axios.get(API_ENDPOINTS.profile, {
                 headers: { Authorization: `Bearer ${token}` }
             })
             setCurrentUser(userRes.data)
 
-            const usersRes = await axios.get('http://localhost:5000/users')
+            const usersRes = await axios.get(API_ENDPOINTS.users)
             setUsers(usersRes.data)
 
             if (searchQuery.trim() !== '') {
-                const searchRes = await axios.get(`http://localhost:5000/users/search/${encodeURIComponent(searchQuery)}`)
+                const searchRes = await axios.get(API_ENDPOINTS.searchUsers(searchQuery))
                 setSearchResults(searchRes.data)
             }
         } catch (err) {

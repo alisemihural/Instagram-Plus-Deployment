@@ -4,6 +4,7 @@ import { AiFillHeart, AiOutlineHeart } from 'react-icons/ai'
 import { BiMessageRounded } from 'react-icons/bi'
 import MediaCarousel from './MediaCarousel.jsx'
 import CommentsModal from './CommentsModal.jsx'
+import { API_ENDPOINTS } from '../config/api'
 
 const PostCard = ({ post, token, currentUserId, currentUser, onFollowChange }) => {
     const [doc, setDoc] = useState(post)
@@ -47,7 +48,7 @@ const PostCard = ({ post, token, currentUserId, currentUser, onFollowChange }) =
 
     const handleLike = async () => {
         try {
-            const res = await axios.patch(`http://localhost:5000/posts/${doc._id}/like`, {}, { headers })
+            const res = await axios.patch(API_ENDPOINTS.likePost(doc._id), {}, { headers })
             const arr = res.data.likes || []
             setLikesCount(arr.length)
             setLiked(arr.some(u => (u?._id || u)?.toString() === (currentUserId || '').toString()))
@@ -61,7 +62,7 @@ const PostCard = ({ post, token, currentUserId, currentUser, onFollowChange }) =
         if (doc.author._id === currentUserId) return
         try {
             setFollowBusy(true)
-            await axios.patch(`http://localhost:5000/users/${doc.author._id}/follow`, {}, { headers })
+            await axios.patch(API_ENDPOINTS.follow(doc.author._id), {}, { headers })
             setIsFollowing(v => !v)
             onFollowChange && onFollowChange()
         } catch (err) {
@@ -74,7 +75,7 @@ const PostCard = ({ post, token, currentUserId, currentUser, onFollowChange }) =
 
     const refreshPost = async () => {
         try {
-            const res = await axios.get(`http://localhost:5000/posts/${doc._id}`, { headers })
+            const res = await axios.get(API_ENDPOINTS.postById(doc._id), { headers })
             const fresh = res.data
             setDoc(fresh)
             setLikesCount(fresh.likesCount ?? (fresh.likes || []).length)

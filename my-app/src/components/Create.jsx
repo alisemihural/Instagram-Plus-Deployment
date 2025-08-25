@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import { API_ENDPOINTS } from '../config/api'
 
 const MAX_MEDIA = 5
 
@@ -48,7 +49,7 @@ const CreatePost = () => {
     const uploadFiles = async files => {
         const fd = new FormData()
         files.forEach(f => fd.append('files', f))
-        const res = await axios.post('http://localhost:5000/upload/media', fd, {
+        const res = await axios.post(API_ENDPOINTS.uploadMedia, fd, {
             headers: { ...headers, 'Content-Type': 'multipart/form-data' }
         })
         return res.data?.media || []
@@ -57,7 +58,7 @@ const CreatePost = () => {
     const deleteByPublicIds = async publicIds => {
         if (!publicIds?.length) return
         try {
-            await axios.delete('http://localhost:5000/upload/media', {
+            await axios.delete(API_ENDPOINTS.uploadMedia, {
                 headers,
                 data: { publicIds }
             })
@@ -226,7 +227,7 @@ const CreatePost = () => {
         }
 
         try {
-            await axios.post('http://localhost:5000/posts', { caption, media }, { headers })
+            await axios.post(API_ENDPOINTS.posts, { caption, media }, { headers })
 
             submittedRef.current = true
             newUploadsRef.current.clear()
@@ -244,7 +245,7 @@ const CreatePost = () => {
             if (!submittedRef.current) {
                 const ids = Array.from(newUploadsRef.current)
                 if (ids.length) {
-                    axios.delete('http://localhost:5000/upload/media', {
+                    axios.delete(API_ENDPOINTS.uploadMedia, {
                         headers,
                         data: { publicIds: ids }
                     }).catch(() => { })

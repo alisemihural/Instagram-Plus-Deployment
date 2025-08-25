@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import axios from 'axios'
 import './Messages.css'
+import { API_ENDPOINTS } from '../config/api'
 
 const Messages = () => {
     const [conversations, setConversations] = useState([])
@@ -30,7 +31,7 @@ const Messages = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const res = await axios.get('http://localhost:5000/users/profile', {
+                const res = await axios.get(API_ENDPOINTS.profile, {
                     headers: { Authorization: `Bearer ${token}` },
                 })
                 setCurrentUserId(res.data._id)
@@ -41,7 +42,7 @@ const Messages = () => {
 
         const fetchConversations = async () => {
             try {
-                const res = await axios.get('http://localhost:5000/messages/conversations', {
+                const res = await axios.get(API_ENDPOINTS.messagesConversations, {
                     headers: { Authorization: `Bearer ${token}` },
                 })
                 setConversations(res.data)
@@ -58,7 +59,7 @@ const Messages = () => {
         const fetchMessages = async () => {
             if (!selectedConv) return
             try {
-                const res = await axios.get(`http://localhost:5000/messages/${selectedConv._id}`, {
+                const res = await axios.get(API_ENDPOINTS.messagesById(selectedConv._id), {
                     headers: { Authorization: `Bearer ${token}` },
                 })
                 setMessages(res.data)
@@ -118,7 +119,7 @@ const Messages = () => {
         if (!newMessage.trim()) return
         try {
             const res = await axios.post(
-                `http://localhost:5000/messages/${selectedConv._id}`,
+                API_ENDPOINTS.messagesById(selectedConv._id),
                 { text: newMessage },
                 { headers: { Authorization: `Bearer ${token}` } }
             )
@@ -149,7 +150,7 @@ const Messages = () => {
 
     const deleteMessage = async (messageId) => {
         try {
-            await axios.delete(`http://localhost:5000/messages/${messageId}`, {
+            await axios.delete(API_ENDPOINTS.deleteMessage(messageId), {
                 headers: { Authorization: `Bearer ${token}` },
             })
             setMessages((prev) => prev.filter((m) => m._id !== messageId))
@@ -168,7 +169,7 @@ const Messages = () => {
         if (!editText.trim()) return
         try {
             const res = await axios.patch(
-                `http://localhost:5000/messages/${editingMessageId}`,
+                API_ENDPOINTS.editMessage(editingMessageId),
                 { text: editText },
                 { headers: { Authorization: `Bearer ${token}` } }
             )
@@ -188,7 +189,7 @@ const Messages = () => {
                 return
             }
 
-            const res = await axios.get(`http://localhost:5000/users/${userId}`)
+            const res = await axios.get(API_ENDPOINTS.userById(userId))
 
             const followers = res.data.followers || []
             const following = res.data.following || []
@@ -205,7 +206,7 @@ const Messages = () => {
 
     const startConversation = async (userId) => {
         try {
-            const res = await axios.post(`http://localhost:5000/messages/start/${userId}`, {}, {
+            const res = await axios.post(API_ENDPOINTS.messagesStart(userId), {}, {
                 headers: { Authorization: `Bearer ${token}` },
             })
             setSelectedConv(res.data)

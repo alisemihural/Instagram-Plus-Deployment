@@ -3,6 +3,7 @@ import axios from 'axios'
 import './home.css'
 import PostCard from './components/PostCard'
 import Modal from 'react-modal'
+import { API_ENDPOINTS } from './config/api'
 
 const PAGE_SIZE = 5
 
@@ -51,7 +52,7 @@ const Home = () => {
     const refreshUser = async () => {
         try {
             if (!token) return
-            const res = await axios.get('http://localhost:5000/users/profile', {
+            const res = await axios.get(API_ENDPOINTS.profile, {
                 headers: authHeaders
             })
             setCurrentUser(res.data)
@@ -75,7 +76,7 @@ const Home = () => {
         postsAbortRef.current = new AbortController()
 
         try {
-            const res = await axios.get('http://localhost:5000/posts', {
+            const res = await axios.get(API_ENDPOINTS.posts, {
                 params: { limit: PAGE_SIZE, cursor: initial ? undefined : cursorRef.current },
                 headers: authHeaders,
                 signal: postsAbortRef.current.signal
@@ -139,7 +140,7 @@ const Home = () => {
     useEffect(() => {
         const fetchStories = async () => {
             try {
-                const res = await axios.get('http://localhost:5000/stories', {
+                const res = await axios.get(API_ENDPOINTS.stories, {
                     headers: authHeaders
                 })
                 setStories(res.data)
@@ -157,7 +158,7 @@ const Home = () => {
     useEffect(() => {
         const fetchStoriesProfile = async () => {
             try {
-                const res = await axios.get('http://localhost:5000/stories/users', {
+                const res = await axios.get(API_ENDPOINTS.storiesUsers, {
                     headers: authHeaders
                 })
                 setStoriesProfile(res.data)

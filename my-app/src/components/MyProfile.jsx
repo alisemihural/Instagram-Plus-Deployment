@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import './UserProfile.css'
 import EditPostModal from './EditPostModal.jsx'
+import { API_ENDPOINTS } from '../config/api'
 
 const PAGE_SIZE = 12
 
@@ -26,7 +27,7 @@ const MyProfile = () => {
         inFlightRef.current = true
         setLoadingMore(true)
         try {
-            const res = await axios.get(`http://localhost:5000/posts/user/${uid}`, {
+            const res = await axios.get(API_ENDPOINTS.userPosts(uid), {
                 params: { limit: PAGE_SIZE, cursor: initial ? undefined : cursor },
                 headers: { Authorization: `Bearer ${token}` }
             })
@@ -52,7 +53,7 @@ const MyProfile = () => {
     }
 
     const refreshUserAndPosts = async () => {
-        const userRes = await axios.get('http://localhost:5000/users/profile', {
+        const userRes = await axios.get(API_ENDPOINTS.profile, {
             headers: authHeaders
         })
         setUser(userRes.data)
