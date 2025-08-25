@@ -50,3 +50,55 @@ a:hover {
     justify-content: center;
     border: '1px solid black';
 }
+
+/* Feed tabs styling */
+.feed-tabs {
+    border-bottom: 1px solid #dbdbdb;
+    margin-bottom: 16px;
+}
+
+.feed-tabs button {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    background: none;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.feed-tabs button:hover {
+    background-color: #fafafa;
+}
+
+.feed-tabs button.active {
+    font-weight: 600;
+    color: #262626;
+    border-bottom: 2px solid #262626;
+}
+
+.feed-tabs button:not(.active) {
+    font-weight: 400;
+    color: #8e8e8e;
+    border-bottom: 2px solid transparent;
+}
+
+/* For You section styling */
+.for-you-section {
+    width: 100%;
+}
+
+.for-you-header h2 {
+    margin: 16px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #262626;
+    border-bottom: 1px solid #dbdbdb;
+    padding-bottom: 8px;
+}
+
+.for-you-header p {
+    font-size: 14px;
+    color: #8e8e8e;
+    margin: 0 0 16px 0;
+}
