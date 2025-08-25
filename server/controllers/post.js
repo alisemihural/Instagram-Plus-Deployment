@@ -87,6 +87,299 @@ export const getFeed = async (req, res) => {
     }
 };
 
+export const getForYouFeed = async (req, res) => {
+    try {
+        const viewerId = new mongoose.Types.ObjectId(req.userId);
+        
+        const me = await User.findById(viewerId).select('following').lean();
+        if (!me) return res.status(401).json({ message: 'unauthorized' });
+
+        const limit = Math.min(parseInt(req.query.limit || '10', 10), 25);
+        const cursor = req.query.cursor ? new Date(req.query.cursor) : null;
+
+        // First, let's see what posts exist in total
+        const totalPosts = await Post.countDocuments();
+        const postsFromOthers = await Post.countDocuments({
+            author: { $nin: [viewerId, ...(me.following || [])] }
+        });
+        const postsNotLiked = await Post.countDocuments({
+            author: { $nin: [viewerId, ...(me.following || [])] },
+            likes: { $ne: viewerId }
+        });
+
+        console.log('Debug counts:');
+        console.log('- Total posts in DB:', totalPosts);
+        console.log('- Posts from non-followed users:', postsFromOthers);
+        console.log('- Posts from non-followed users that you haven\'t liked:', postsNotLiked);
+
+        // More lenient approach: if no posts from criteria above, show any posts you haven't liked
+        let match;
+        if (postsNotLiked === 0) {
+            console.log('No posts from strict criteria, using lenient approach...');
+            match = {
+                author: { $ne: viewerId }, // Just exclude your own posts
+                likes: { $ne: viewerId }   // And posts you've liked
+            };
+        } else {
+            match = {
+                author: { $nin: [viewerId, ...(me.following || [])] },
+                likes: { $ne: viewerId }
+            };
+        }
+
+        if (cursor) match.createdAt = { $lt: cursor };
+
+        console.log('Using match criteria:', match);
+
+        // Get user's interaction history to analyze interests
+        const userInteractions = await Post.find({
+            $or: [
+                { likes: viewerId },
+                { 'comments.user': viewerId }
+            ]
+        }).select('caption author').limit(50).lean();
+
+        // Extract hashtags and keywords from user's liked/commented posts
+        const userHashtags = new Set();
+        const userKeywords = new Set();
+        const interactedAuthors = new Set();
+
+        userInteractions.forEach(post => {
+            interactedAuthors.add(post.author.toString());
+            
+            if (post.caption) {
+                // Extract hashtags
+                const hashtags = post.caption.match(/#\w+/g) || [];
+                hashtags.forEach(tag => userHashtags.add(tag.toLowerCase()));
+                
+                // Extract keywords (words longer than 3 chars, not hashtags/mentions/URLs)
+                const words = post.caption.toLowerCase()
+                    .split(/\s+/)
+                    .filter(word => 
+                        word.length > 3 && 
+                        !word.startsWith('#') && 
+                        !word.startsWith('@') &&
+                        !/^https?:\/\//.test(word)
+                    );
+                words.forEach(word => userKeywords.add(word));
+            }
+        });
+
+        const hashtagsArray = Array.from(userHashtags);
+        const keywordsArray = Array.from(userKeywords);
+        const authorsArray = Array.from(interactedAuthors);
+
+        console.log('User interests found:');
+        console.log('- Hashtags from liked posts:', hashtagsArray.slice(0, 10));
+        console.log('- Keywords from liked posts:', keywordsArray.slice(0, 10));
+        console.log('- Interacted authors count:', authorsArray.length);
+
+        // Enhanced pipeline with interest-based scoring
+        const pipeline = [
+            { $match: match },
+            {
+                $addFields: {
+                    // Extract hashtags from this post's caption
+                    postHashtags: {
+                        $map: {
+                            input: {
+                                $filter: {
+                                    input: { $split: [{ $ifNull: ['$caption', ''] }, ' '] },
+                                    cond: { $regexMatch: { input: '$$this', regex: '^#\\w+' } }
+                                }
+                            },
+                            as: 'tag',
+                            in: { $toLower: '$$tag' }
+                        }
+                    },
+                    // Extract words from this post's caption
+                    postWords: {
+                        $filter: {
+                            input: {
+                                $map: {
+                                    input: { $split: [{ $toLower: { $ifNull: ['$caption', ''] } }, ' '] },
+                                    as: 'word',
+                                    in: {
+                                        $cond: {
+                                            if: {
+                                                $and: [
+                                                    { $gt: [{ $strLenCP: '$$word' }, 3] },
+                                                    { $not: { $regexMatch: { input: '$$word', regex: '^[#@]' } } },
+                                                    { $not: { $regexMatch: { input: '$$word', regex: '^https?://' } } }
+                                                ]
+                                            },
+                                            then: '$$word',
+                                            else: null
+                                        }
+                                    }
+                                }
+                            },
+                            cond: { $ne: ['$$this', null] }
+                        }
+                    },
+                    // Basic engagement and recency
+                    engagementScore: {
+                        $add: [
+                            { $size: { $ifNull: ['$likes', []] } },
+                            { $multiply: [{ $size: { $ifNull: ['$comments', []] } }, 2] }
+                        ]
+                    },
+                    daysSinceCreated: {
+                        $divide: [
+                            { $subtract: [new Date(), '$createdAt'] },
+                            86400000
+                        ]
+                    }
+                }
+            },
+            {
+                $addFields: {
+                    finalScore: {
+                        $add: [
+                            // 1. INTEREST-BASED SCORING (HIGHEST PRIORITY)
+                            
+                            // Hashtag similarity (0-20 points) - VERY HIGH IMPACT
+                            {
+                                $multiply: [
+                                    {
+                                        $size: {
+                                            $setIntersection: ['$postHashtags', hashtagsArray]
+                                        }
+                                    },
+                                    10 // Each matching hashtag = 10 points
+                                ]
+                            },
+                            
+                            // Keyword similarity (0-15 points) - HIGH IMPACT  
+                            {
+                                $multiply: [
+                                    {
+                                        $size: {
+                                            $setIntersection: ['$postWords', keywordsArray]
+                                        }
+                                    },
+                                    3 // Each matching keyword = 3 points
+                                ]
+                            },
+                            
+                            // Author similarity (0-15 points) - if you've interacted with this author before
+                            {
+                                $cond: {
+                                    if: { 
+                                        $in: [
+                                            '$author', 
+                                            authorsArray.map(id => new mongoose.Types.ObjectId(id))
+                                        ] 
+                                    },
+                                    then: 15,
+                                    else: 0
+                                }
+                            },
+
+                            // 2. ENGAGEMENT SCORING (MEDIUM PRIORITY)
+                            {
+                                $multiply: ['$engagementScore', 0.3] // Reduced from 0.5
+                            },
+
+                            // 3. RECENCY BONUS (MEDIUM PRIORITY)
+                            {
+                                $max: [
+                                    0,
+                                    { $subtract: [8, '$daysSinceCreated'] } // Reduced from 10
+                                ]
+                            },
+
+                            // 4. CONTENT QUALITY INDICATORS
+                            {
+                                $cond: {
+                                    if: { $gt: [{ $strLenCP: { $ifNull: ['$caption', ''] } }, 20] },
+                                    then: 2, // Bonus for posts with substantial captions
+                                    else: 0
+                                }
+                            },
+
+                            // 5. DIVERSITY (LOWEST PRIORITY)
+                            { $multiply: [{ $rand: {} }, 3] } // Reduced randomness
+                        ]
+                    }
+                }
+            },
+            { $sort: { finalScore: -1, createdAt: -1 } },
+            { $limit: limit },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'author',
+                    foreignField: '_id',
+                    as: 'author'
+                }
+            },
+            { $unwind: '$author' },
+            {
+                $project: {
+                    caption: 1,
+                    media: {
+                        $map: {
+                            input: '$media',
+                            as: 'm',
+                            in: {
+                                kind: '$$m.kind',
+                                src: '$$m.src',
+                                publicId: '$$m.publicId',
+                                width: '$$m.width',
+                                height: '$$m.height',
+                                duration: '$$m.duration'
+                            }
+                        }
+                    },
+                    createdAt: 1,
+                    updatedAt: 1,
+                    author: {
+                        _id: '$author._id',
+                        username: '$author.username',
+                        profilePic: '$author.profilePic'
+                    },
+                    likesCount: { $size: { $ifNull: ['$likes', []] } },
+                    commentsCount: { $size: { $ifNull: ['$comments', []] } },
+                    isLiked: { $in: [viewerId, { $ifNull: ['$likes', []] }] },
+                    finalScore: 1,
+                    engagementScore: 1,
+                    // Debug fields to see what matched
+                    matchedHashtags: {
+                        $setIntersection: ['$postHashtags', hashtagsArray]
+                    },
+                    matchedKeywords: {
+                        $setIntersection: ['$postWords', keywordsArray]
+                    }
+                }
+            }
+        ];
+
+        const items = await Post.aggregate(pipeline).allowDiskUse(true);
+        
+        console.log('ForYou results count:', items.length);
+        if (items.length > 0) {
+            console.log('Sample results:', items.slice(0, 3).map(item => ({
+                id: item._id,
+                author: item.author.username,
+                finalScore: item.finalScore,
+                engagementScore: item.engagementScore,
+                likes: item.likesCount,
+                comments: item.commentsCount,
+                isLiked: item.isLiked,
+                matchedHashtags: item.matchedHashtags,
+                matchedKeywords: item.matchedKeywords
+            })));
+        }
+
+        const nextCursor = items.length === limit ? items[items.length - 1].createdAt : null;
+        res.status(200).json({ items, nextCursor });
+    } catch (err) {
+        console.error('getForYouFeed error', err);
+        res.status(500).json({ message: 'server error' });
+    }
+};
+
 
 export const getPost = async (req, res) => {
     try {
