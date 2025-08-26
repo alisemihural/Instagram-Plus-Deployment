@@ -1,7 +1,10 @@
 import { useEffect, useState, useRef } from 'react'
 import axios from 'axios'
+import { io } from 'socket.io-client'
 import './Messages.css'
-import { API_ENDPOINTS } from '../config/api'
+import { API_BASE_URL, API_ENDPOINTS } from '../config/api'
+
+const socket = io(API_BASE_URL)
 
 const Messages = () => {
     const [conversations, setConversations] = useState([])
@@ -28,6 +31,7 @@ const Messages = () => {
     const prevMessagesLength = useRef(0)
     const skipScrollRef = useRef(false)
 
+    // Fetch user and conversations on load
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -55,6 +59,7 @@ const Messages = () => {
         fetchConversations()
     }, [token])
 
+    // Fetch messages when conversation changes
     useEffect(() => {
         const fetchMessages = async () => {
             if (!selectedConv) return
@@ -85,6 +90,34 @@ const Messages = () => {
         }
     }, [editText])
 
+    // WebSocket: join room and listen for incoming messages, edits, deletes
+    useEffect(() => {
+        if (!selectedConv) return
+
+        socket.emit('joinConversation', selectedConv._id)
+
+        socket.on('receiveMessage', (message) => {
+            setMessages((prev) => [...prev, message])
+        })
+
+        socket.on('messageEdited', (editedMessage) => {
+            setMessages((prev) =>
+                prev.map((m) => (m._id === editedMessage._id ? editedMessage : m))
+            )
+        })
+
+        socket.on('messageDeleted', (deletedMessageId) => {
+            setMessages((prev) => prev.filter((m) => m._id !== deletedMessageId))
+        })
+
+        return () => {
+            socket.off('receiveMessage')
+            socket.off('messageEdited')
+            socket.off('messageDeleted')
+        }
+    }, [selectedConv])
+
+    // Auto scroll on new message or convo change
     useEffect(() => {
         if (!messagesEndRef.current) return
 
@@ -123,11 +156,20 @@ const Messages = () => {
                 { text: newMessage },
                 { headers: { Authorization: `Bearer ${token}` } }
             )
-            setMessages((prev) => [...prev, res.data])
+
+            const sentMessage = res.data
+
+            setMessages((prev) => [...prev, sentMessage])
             setNewMessage('')
             if (textareaRef.current) {
                 textareaRef.current.style.height = 'auto'
             }
+
+            // Emit message to others in the room
+            socket.emit('sendMessage', {
+                conversationId: selectedConv._id,
+                message: sentMessage,
+            })
         } catch (err) {
             console.error('Failed to send message:', err)
         }
@@ -155,6 +197,9 @@ const Messages = () => {
             })
             setMessages((prev) => prev.filter((m) => m._id !== messageId))
             disableScrollAfterEditOrDelete()
+
+            // Emit delete event to others
+            socket.emit('deleteMessage', { conversationId: selectedConv._id, messageId })
         } catch (err) {
             console.error('Failed to delete message:', err)
         }
@@ -177,6 +222,9 @@ const Messages = () => {
             setEditingMessageId(null)
             setEditText('')
             disableScrollAfterEditOrDelete()
+
+            // Emit edit event to others
+            socket.emit('editMessage', { conversationId: selectedConv._id, message: res.data })
         } catch (err) {
             console.error('Failed to edit message:', err)
         }
