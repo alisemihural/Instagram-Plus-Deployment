@@ -12,6 +12,8 @@ import uploadRoutes from './routes/upload.js'
 import storyRoutes from './routes/stories.js'
 import messageRoutes from './routes/messages.js'
 
+import "./jobs/clearStories.js"
+
 const app = express()
 dotenv.config()
 
@@ -44,7 +46,7 @@ app.use('/upload', uploadRoutes)
 app.use('/stories', storyRoutes)
 app.use('/messages', messageRoutes)
 
-const PORT = process.env.PORT || 5001
+const PORT = process.env.PORT || 5000
 
 mongoose.connect(process.env.CONNECTION_URL)
     .then(() => app.listen(PORT, () => {
