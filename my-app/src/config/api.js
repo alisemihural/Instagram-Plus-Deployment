@@ -30,6 +30,7 @@ export const API_ENDPOINTS = {
 
     // Post endpoints
     posts: createApiUrl('posts'),
+    forYouPosts: createApiUrl('posts/foryou'),
     postById: (id) => createApiUrl(`posts/${id}`),
     userPosts: (userId) => createApiUrl(`posts/user/${userId}`),
     likePost: (id) => createApiUrl(`posts/${id}/like`),

@@ -1,10 +1,11 @@
 import express from 'express'
 import auth from '../middleware/auth.js'
-import { createPost, getFeed, likePost, addComment, getComments, getUserPosts, updatePost, deletePost, likeComment, editComment, deleteComment, getPost } from '../controllers/post.js'
+import { createPost, getFeed, getForYouFeed, likePost, addComment, getComments, getUserPosts, updatePost, deletePost, likeComment, editComment, deleteComment, getPost } from '../controllers/post.js'
 
 const router = express.Router()
 
 router.get('/', auth, getFeed)
+router.get('/foryou', auth, getForYouFeed)
 router.get('/user/:userId', auth, getUserPosts)
 router.post('/', auth, createPost)
 router.patch('/:id/like', auth, likePost)

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import axios from 'axios'
 import './home.css'
 import PostCard from './components/PostCard'
+import ForYouFeed from './components/ForYouFeed'
 import Modal from 'react-modal'
 import { API_ENDPOINTS } from './config/api'
 import { FiChevronLeft, FiChevronRight } from 'react-icons/fi'
@@ -16,6 +17,7 @@ const Home = () => {
     const [storiesLoaded, setStoriesLoaded] = useState(false)
     const [showStorySlides, setShowStorySlides] = useState(false)
     const [currentStory, setCurrentStory] = useState(0)
+    const [activeTab, setActiveTab] = useState('following') // New state for tab switching
 
     const [cursor, setCursor] = useState(null)
     const [hasMore, setHasMore] = useState(true)
@@ -227,6 +229,7 @@ const Home = () => {
                 )}
             </Modal>
 
+            {/* Stories Section */}
             {storiesProfile.length === 0 ? (
                 <p>No stories yet</p>
             ) : (
@@ -255,27 +258,92 @@ const Home = () => {
                 </div>
             )}
 
-            {posts.length === 0 && !loadingPosts && !postsError && (
-                <p>No posts yet</p>
-            )}
+            {/* Tab Navigation */}
+            <div className="feed-tabs" style={{
+                display: 'flex',
+                borderBottom: '1px solid #dbdbdb',
+                marginBottom: '16px',
+                position: 'sticky',
+                top: '0',
+                backgroundColor: 'white',
+                zIndex: 10
+            }}>
+                <button
+                    onClick={() => setActiveTab('following')}
+                    style={{
+                        flex: 1,
+                        padding: '12px',
+                        border: 'none',
+                        background: 'none',
+                        fontSize: '14px',
+                        fontWeight: activeTab === 'following' ? '600' : '400',
+                        color: activeTab === 'following' ? '#262626' : '#8e8e8e',
+                        borderBottom: activeTab === 'following' ? '2px solid #262626' : '2px solid transparent',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                    }}
+                >
+                    Following
+                </button>
+                <button
+                    onClick={() => setActiveTab('foryou')}
+                    style={{
+                        flex: 1,
+                        padding: '12px',
+                        border: 'none',
+                        background: 'none',
+                        fontSize: '14px',
+                        fontWeight: activeTab === 'foryou' ? '600' : '400',
+                        color: activeTab === 'foryou' ? '#262626' : '#8e8e8e',
+                        borderBottom: activeTab === 'foryou' ? '2px solid #262626' : '2px solid transparent',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                    }}
+                >
+                    For You
+                </button>
+            </div>
 
-            {posts.map(p => (
-                <PostCard
-                    key={p._id}
-                    post={p}
-                    token={token}
-                    currentUserId={currentUser?._id}
+            {/* Feed Content */}
+            {activeTab === 'following' ? (
+                <div className="following-feed">
+                    {posts.length === 0 && !loadingPosts && !postsError && (
+                        <div style={{ 
+                            textAlign: 'center', 
+                            padding: '32px 16px',
+                            color: '#8e8e8e',
+                            fontSize: '14px'
+                        }}>
+                            <p>No posts from people you follow yet</p>
+                            <p>Follow some users or check out the "For You" section!</p>
+                        </div>
+                    )}
+
+                    {posts.map(p => (
+                        <PostCard
+                            key={p._id}
+                            post={p}
+                            token={token}
+                            currentUserId={currentUser?._id}
+                            currentUser={currentUser}
+                            onFollowChange={refreshUser}
+                        />
+                    ))}
+
+                    {postsError && <div style={{ color: 'crimson', padding: 12 }}>{postsError}</div>}
+                    {loadingPosts && <div style={{ padding: 12 }}>Loading…</div>}
+                    {!hasMore && posts.length > 0 && <div style={{ padding: 12, color: '#777' }}>You're all caught up</div>}
+
+                    {/* sentinel for infinite scroll */}
+                    <div ref={sentinelRef} style={{ height: 1 }} />
+                </div>
+            ) : (
+                <ForYouFeed
                     currentUser={currentUser}
+                    token={token}
                     onFollowChange={refreshUser}
                 />
-            ))}
-
-            {postsError && <div style={{ color: 'crimson', padding: 12 }}>{postsError}</div>}
-            {loadingPosts && <div style={{ padding: 12 }}>Loading…</div>}
-            {!hasMore && posts.length > 0 && <div style={{ padding: 12, color: '#777' }}>You’re all caught up</div>}
-
-            {/* sentinel for infinite scroll */}
-            <div ref={sentinelRef} style={{ height: 1 }} />
+            )}
         </div>
     )
 }
