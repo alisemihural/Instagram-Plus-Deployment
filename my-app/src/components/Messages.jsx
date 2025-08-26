@@ -272,7 +272,7 @@ const Messages = () => {
         <div className="messages-container">
             <div className="sidebar">
                 <h3>Conversations</h3>
-                <button onClick={() => fetchFollowUsers(currentUserId)} style={{ marginBottom: 10 }}>
+                <button className="new-message-button" onClick={() => fetchFollowUsers(currentUserId)}>
                     New Message
                 </button>
 
