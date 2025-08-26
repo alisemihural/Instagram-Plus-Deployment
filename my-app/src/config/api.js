@@ -1,9 +1,9 @@
 // API configuration based on environment
-const isDevelopment = import.meta.env.MODE === 'development' || 
-                     import.meta.env.DEV || 
-                     window.location.hostname === 'localhost';
+const isDevelopment = import.meta.env.MODE === 'development' ||
+    import.meta.env.DEV ||
+    window.location.hostname === 'localhost';
 
-export const API_BASE_URL = isDevelopment 
+export const API_BASE_URL = isDevelopment
     ? 'http://localhost:5000'
     : 'https://instaplus.up.railway.app';
 
@@ -19,7 +19,7 @@ export const API_ENDPOINTS = {
     // Auth endpoints
     login: createApiUrl('auth/login'),
     register: createApiUrl('auth/register'),
-    
+
     // User endpoints
     profile: createApiUrl('users/profile'),
     editProfile: createApiUrl('users/editProfile'),
@@ -27,7 +27,7 @@ export const API_ENDPOINTS = {
     userById: (id) => createApiUrl(`users/${id}`),
     follow: (id) => createApiUrl(`users/${id}/follow`),
     searchUsers: (query) => createApiUrl(`users/search/${encodeURIComponent(query)}`),
-    
+
     // Post endpoints
     posts: createApiUrl('posts'),
     postById: (id) => createApiUrl(`posts/${id}`),
@@ -38,15 +38,15 @@ export const API_ENDPOINTS = {
     deletePost: (id) => createApiUrl(`posts/${id}`),
     commentById: (postId, commentId) => createApiUrl(`posts/${postId}/comments/${commentId}`),
     likeComment: (postId, commentId) => createApiUrl(`posts/${postId}/comments/${commentId}/like`),
-    
+
     // Story endpoints
     stories: createApiUrl('stories'),
     storiesUsers: createApiUrl('stories/users'),
-    
+
     // Upload endpoints
     uploadMedia: createApiUrl('upload/media'),
     uploadVideo: createApiUrl('upload/video'),
-    
+
     // Messages endpoints
     messagesConversations: createApiUrl('messages/conversations'),
     messagesById: (id) => createApiUrl(`messages/${id}`),
