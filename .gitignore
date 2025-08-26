@@ -85,11 +85,6 @@ nosetests.xml
 *.coverage
 *.hypothesis/
 
-# Docker
-**/Dockerfile
-**/docker-compose.yml
-docker-compose.override.yml
-
 # Misc
 *.tgz
 *.zip
