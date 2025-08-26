@@ -4,6 +4,8 @@ import mongoose from 'mongoose'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import compression from 'compression'
+import http from 'http'
+import { Server as SocketIOServer } from 'socket.io'
 
 import authRoutes from './routes/auth.js'
 import postRoutes from './routes/posts.js'
@@ -17,6 +19,19 @@ import "./jobs/clearStories.js"
 const app = express()
 dotenv.config()
 
+
+// HTTP server
+const server = http.createServer(app)
+
+// Socket.IO server
+const io = new SocketIOServer(server, {
+    cors: {
+        origin: '*',
+        methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+    },
+})
+
+// Middleware
 app.use(cors({
     origin: true,
     credentials: true,
@@ -39,6 +54,7 @@ app.get('/test', (req, res) => {
     res.json({ message: 'CORS is working!' })
 })
 
+// Routes
 app.use('/auth', authRoutes)
 app.use('/posts', postRoutes)
 app.use('/users', userRoutes)
@@ -46,11 +62,39 @@ app.use('/upload', uploadRoutes)
 app.use('/stories', storyRoutes)
 app.use('/messages', messageRoutes)
 
+// Socket.IO Logic
+io.on('connection', (socket) => {
+    console.log('Client connected:', socket.id)
+
+    socket.on('joinConversation', (conversationId) => {
+        socket.join(conversationId)
+        console.log(`Socket ${socket.id} joined room ${conversationId}`)
+    })
+
+    socket.on('sendMessage', ({ conversationId, message }) => {
+        socket.to(conversationId).emit('receiveMessage', message)
+    })
+
+    socket.on('editMessage', ({ conversationId, message }) => {
+        socket.to(conversationId).emit('messageEdited', message)
+    })
+
+    socket.on('deleteMessage', ({ conversationId, messageId }) => {
+        socket.to(conversationId).emit('messageDeleted', messageId)
+    })
+
+    socket.on('disconnect', () => {
+        console.log('Client disconnected:', socket.id)
+    })
+})
+
 const PORT = process.env.PORT || 5000
 
 mongoose.connect(process.env.CONNECTION_URL)
-    .then(() => app.listen(PORT, () => {
-        console.log(`Server running on port: ${PORT}`)
-        console.log(`Database connected: ${process.env.CONNECTION_URL}`)
-    }))
-    .catch((error) => console.log(error.message))
+    .then(() => {
+        server.listen(PORT, () => {
+            console.log(`Server running on port: ${PORT}`)
+            console.log(`Database connected: ${process.env.CONNECTION_URL}`)
+        })
+    })
+    .catch((error) => console.log('MongoDB connection error:', error.message))
