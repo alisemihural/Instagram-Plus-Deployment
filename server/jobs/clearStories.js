@@ -1,11 +1,11 @@
 import { CronJob } from "cron";
-import User from "../models/User";
+import User from '../models/User.js'
 
 const clearAllStories = new CronJob(
     '0 0 * * *',
-    async () => { 
+    async () => {
         try {
-            const clearAllStories = await User.updateMany({}, {$set: {stories: []}});
+            const clearAllStories = await User.updateMany({}, { $set: { stories: [] } });
             console.log("Clearing stories");
         } catch (e) {
             console.log(e);
