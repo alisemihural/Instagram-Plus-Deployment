@@ -277,6 +277,7 @@ const Messages = () => {
                 </button>
 
                 {conversations.map((conv) => {
+                    if (!currentUserId) return
                     const otherUser = conv.participants.find((p) => p._id !== currentUserId)
                     return (
                         <div

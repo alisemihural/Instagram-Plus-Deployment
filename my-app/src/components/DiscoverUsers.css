@@ -124,10 +124,6 @@
     border-color: #ff4757;
 }
 
-.follow-btn.following:hover::after {
-    content: " Unfollow";
-}
-
 .no-users {
     text-align: center;
     color: #666;
