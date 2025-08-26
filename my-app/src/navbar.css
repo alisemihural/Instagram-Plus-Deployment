@@ -1,9 +1,8 @@
 .ig-nav {
     position: sticky;
     top: 0;
-    height: 100vh;
+    height: 100%;
     width: 250px;
-    padding: 28px 8px;
     border-right: 1px solid #262626;
     background: #000;
     color: #fff;
