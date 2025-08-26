@@ -45,8 +45,17 @@ a:hover {
 }
 
 .story-content {
-    text-align: center;
+    display: flex;
+    justify-content: center;
     align-items: center;
+    width: 100%;
+    height: 100%;
+}
+
+.slide-display {
+    display: flex;
+    align-items: center;
+    text-align: center;
     justify-content: center;
     border: '1px solid black';
 }
