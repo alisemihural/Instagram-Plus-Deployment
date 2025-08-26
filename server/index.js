@@ -6,6 +6,8 @@ import dotenv from 'dotenv'
 import compression from 'compression'
 import http from 'http'
 import { Server as SocketIOServer } from 'socket.io'
+import path from 'path'
+import { fileURLToPath } from 'url'
 
 import authRoutes from './routes/auth.js'
 import postRoutes from './routes/posts.js'
@@ -61,6 +63,18 @@ app.use('/users', userRoutes)
 app.use('/upload', uploadRoutes)
 app.use('/stories', storyRoutes)
 app.use('/messages', messageRoutes)
+
+// Get current directory for ES modules
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+// Serve static files from the React app build directory
+app.use(express.static(path.join(__dirname, 'client')))
+
+// Catch-all handler: send back React's index.html file for any non-API routes
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'client', 'index.html'))
+})
 
 // Socket.IO Logic
 io.on('connection', (socket) => {
