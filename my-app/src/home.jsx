@@ -4,6 +4,7 @@ import './home.css'
 import PostCard from './components/PostCard'
 import Modal from 'react-modal'
 import { API_ENDPOINTS } from './config/api'
+import { FiChevronLeft, FiChevronRight } from 'react-icons/fi'
 
 const PAGE_SIZE = 5
 
@@ -28,6 +29,7 @@ const Home = () => {
     const postsAbortRef = useRef(null)
     const hasMoreRef = useRef(true)
     const cursorRef = useRef(null)
+    const storyRef = useRef({})
 
     const storiesInitRef = useRef(false)
     const storiesProfileInitRef = useRef(false)
@@ -37,17 +39,10 @@ const Home = () => {
 
     const openStorySlides = authorId => {
         setCurrentStory(authorId)
+        storyRef.current[authorId].style.border = "none"
         setShowStorySlides(true)
     }
     const closeStorySlides = () => setShowStorySlides(false)
-
-    const previousStory = () => {
-        setCurrentStory(prev => prev === 0 ? Math.max(Object.keys(stories).length - 1, 0) : prev - 1)
-    }
-
-    const nextStory = () => {
-        setCurrentStory(prev => prev === Object.keys(stories).length - 1 ? 0 : prev + 1)
-    }
 
     const refreshUser = async () => {
         try {
@@ -172,21 +167,62 @@ const Home = () => {
         }
     }, [storiesLoaded])
 
+    function StorySlideShow(storyList) {
+        const [index, setIndex] = useState(0);
+
+        const allUserStories = storyList.storyList;
+
+        const previousStory = () => {
+            setIndex((previousIndex) => (previousIndex === 0 ? (allUserStories.length - 1) : (previousIndex - 1)));
+        }
+        const nextStory = () => {
+            setIndex((previousIndex) => (previousIndex === (allUserStories.length - 1) ? 0 : (previousIndex + 1)));
+        }
+
+        return (
+            <div className='slide-display'>
+                <button onClick={previousStory}>
+                    <FiChevronLeft size={24}/>
+                </button>
+                <img
+                    key={currentStory + index}
+                    src={allUserStories[index]}
+                    alt='Story'
+                    style={{ width: "75%", height: "75%" }}
+                />
+                <button onClick={nextStory}>
+                    <FiChevronRight size={24}/>
+                </button>
+            </div>
+        )
+    }
+
     return (
         <div className='feed-container'>
-            <Modal isOpen={showStorySlides} onRequestClose={closeStorySlides}>
+            <Modal isOpen={showStorySlides} onRequestClose={closeStorySlides} style={
+                    {content: {
+                        display: "flex",
+                        justifyContent: "center",
+                        textAlign: "center",
+                        alignContent: "center",
+                        width: "50%", 
+                        height: "100%",
+                        inset: "unset"
+                    },
+                    overlay: {
+                        display: "flex",
+                        textAlign: "center",
+                        justifyContent: "center",
+                        alignContent: "center",
+                        height: "100%",
+                        position: "fixed"
+                    },
+
+                }
+                }>
                 {currentStory && (
                     <div className='story-content'>
-                        {
-                            (stories[currentStory]).map((eachStory, index) => (
-                                <img
-                                    key={currentStory + index}
-                                    src={eachStory}
-                                    alt='Story'
-                                    style={{ width: "75%", height: "75%" }}
-                                />
-                            ))
-                        }
+                        <StorySlideShow storyList={stories[currentStory]}/>
                     </div>
                 )}
             </Modal>
@@ -207,6 +243,9 @@ const Home = () => {
                                         alt='Story'
                                         className='story-image'
                                         style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: '2px solid #e1306c' }}
+                                        ref={(element) => {
+                                            storyRef.current[s._id] = element
+                                        }}
                                     />
                                 </div>
                             </a>

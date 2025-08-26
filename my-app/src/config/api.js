@@ -4,7 +4,7 @@ const isDevelopment = import.meta.env.MODE === 'development' ||
                      window.location.hostname === 'localhost';
 
 export const API_BASE_URL = isDevelopment 
-    ? 'http://localhost:5001'
+    ? 'http://localhost:5000'
     : 'https://instaplus.up.railway.app';
 
 // Helper function to create full API URLs
