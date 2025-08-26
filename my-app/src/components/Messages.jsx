@@ -304,6 +304,23 @@ const Messages = () => {
             <div className="chat-window">
                 {selectedConv ? (
                     <>
+                        <div className="chat-header">
+                            {selectedConv.participants
+                                .filter((p) => p._id !== currentUserId)
+                                .map((user) => (
+                                    <div key={user._id} className="chat-user-info">
+                                        <img
+                                            src={user.profilePic || 'https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png'}
+                                            alt={`${user.username} profile`}
+                                            className="chat-user-avatar"
+                                        />
+                                        <div className="chat-user-details">
+                                            <div className="chat-username">{user.username}</div>
+                                        </div>
+                                    </div>
+                                ))}
+                        </div>
+
                         <div className="messages-list">
                             {messages.map((msg) => (
                                 <div
@@ -394,6 +411,7 @@ const Messages = () => {
                 ) : (
                     <div className="no-conversation">Select or start a conversation</div>
                 )}
+
             </div>
         </div>
     )
